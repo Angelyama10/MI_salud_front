@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { REACT_URI_API } from '@env';
 
 const ApiUrl = REACT_URI_API;
@@ -33,6 +34,27 @@ export const auth = async (dataUser) => {
     return dataAuth; // Esto debería contener el token si es exitoso
   } catch (error) {
     console.error("Error en autenticación (catch):", error);
+=======
+const ApiUrl = `${process.env.REACT_URI_API}/${process.env.Version}`;
+
+export const auht = async (dataUser) => {
+  try {
+    const response = await fetch(`${ApiUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'content-Type': 'application/json',
+      },
+      body: JSON.stringify(dataUser),
+    });
+
+    if (!response.ok) {
+        throw new Error('error en la creacion del usuario');
+      }
+  
+      const dataAuth= await response.json();
+      return dataAuth;
+  } catch (error) {
+>>>>>>> 9f386f8759d2feb72ee3f01bfdae7d025dc909c5
     throw error;
   }
 };
