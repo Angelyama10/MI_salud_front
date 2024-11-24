@@ -1,38 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Nuevo icono
 import FromComponents from '../components/FromComponents';
+import { registerUser } from '../services/usuario.service';
+
 
 const NuevoUsuario = ({ navigation }) => {
+  const handleRegister = async (userData) => {
+    if (typeof registerUser !== 'function') {
+      console.error('registerUser no está definido correctamente.');
+      return;
+    }
   
-  const handleRegister = () => {
-    // Aquí puedes manejar el envío del formulario, por ejemplo, llamar a una API
-    if (password === confirmPassword) {
-      alert(`Usuario registrado:\nNombre: ${username}\nApellidos: ${lastName}`);
-    } else {
-      alert('Las contraseñas no coinciden');
+    try {
+      console.log('Datos enviados al registro:', userData);
+      const response = await registerUser(userData);
+      Alert.alert('Éxito', 'Usuario registrado correctamente');
+      navigation.navigate('Login');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Hubo un problema al procesar el registro');
+      console.error('Error en handleRegister:', error);
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Encabezado con Icono */}
       <View style={styles.topContainer}>
+        <Icon name="account-plus" size={100} color="#5A9BD3" />
         <Text style={styles.title}>Rellena tus datos</Text>
-        <Image source={require('../../assets/images/Nuevo_usuario.jpg')} style={styles.image} />
       </View>
 
-      <FromComponents 
-        onRegister={handleRegister} 
-        navigation={navigation} 
+      {/* Formulario */}
+      <FromComponents
+        onRegister={handleRegister}
+        navigation={navigation}
         placeholders={{
-          username: "Nombres",
-          lastName: "Apellidos",
-          birthdate: "Fecha de nacimiento",
-          gender: "Sexo",
-          password: "Contraseña",
-          confirmPassword: "Confirmar contraseña"
+          username: 'Nombres',
+          lastName: 'Apellidos',
+          birthdate: 'Fecha de nacimiento (dd/mm/aaaa)',
+          gender: 'Sexo',
+          password: 'Contraseña',
+          confirmPassword: 'Confirmar contraseña',
+          email: 'Correo electrónico',
         }}
       />
-      
     </ScrollView>
   );
 };
@@ -40,7 +52,7 @@ const NuevoUsuario = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#FFFFFF', // Fondo blanco para el contenedor principal
+    backgroundColor: '#FFFFFF',
     paddingVertical: 20,
   },
   topContainer: {
@@ -48,16 +60,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 45,
-    fontFamily: 'YanoneKaffeesatz-Regular',
-    marginBottom: 10,
-    color: '#000000',
-  },
-  image: {
-    width: 120,
-    height: 120,
-    resizeMode: 'contain',
-    marginBottom: 20,
+    fontSize: 24,
+    fontWeight: '600',
+    marginTop: 10,
+    color: '#333333',
   },
 });
 

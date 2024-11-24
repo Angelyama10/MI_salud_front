@@ -10,14 +10,13 @@
     "test": "jest"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-native-fontawesome": "^0.3.2",
+    "@notifee/react-native": "^9.1.2",
     "@react-native-async-storage/async-storage": "^2.0.0",
-=======
-    "@expo/metro-runtime": "~3.2.3",
->>>>>>> 9f386f8759d2feb72ee3f01bfdae7d025dc909c5
     "@react-native-community/datetimepicker": "^8.2.0",
+    "@react-native-firebase/app": "^21.6.0",
+    "@react-native-firebase/messaging": "^21.6.0",
     "@react-native-picker/picker": "^2.8.0",
     "@react-native-vector-icons/material-icons": "^0.0.1-alpha.25",
     "@react-navigation/bottom-tabs": "^6.6.1",
@@ -25,14 +24,11 @@
     "@react-navigation/stack": "^6.4.1",
     "axios": "^1.7.7",
     "expo": "^51.0.38",
+    "moment": "^2.30.1",
     "react": "18.2.0",
-<<<<<<< HEAD
+    "react-hook-form": "^7.53.2",
     "react-native": "0.74.3",
     "react-native-dotenv": "^3.4.11",
-=======
-    "react-dom": "18.2.0",
-    "react-native": "^0.74.3",
->>>>>>> 9f386f8759d2feb72ee3f01bfdae7d025dc909c5
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "^2.18.1",
     "react-native-linear-gradient": "^2.8.3",

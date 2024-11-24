@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, Alert, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRoute } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MedicationOption from '../components/MedicationOption';
 import SaveButton from '../components/SaveButton';
 import { postMedicamentos } from '../services/medicamentos.service';
+import { TokenContext } from '../context/TokenContext'; // Importa el contexto
 
 const { width, height } = Dimensions.get('window');
 
@@ -13,6 +14,8 @@ const AdditionalForm = ({ navigation }) => {
   const route = useRoute();
   const medicamentoNombre = route.params?.medicamentoNombre || 'Medicamento, 300mg';
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+
+  const { token, setMedicamentos } = useContext(TokenContext); // Contexto del token y medicamentos
 
   const getToken = async () => {
     try {
@@ -23,51 +26,64 @@ const AdditionalForm = ({ navigation }) => {
     }
   };
 
+  const determinarAccion = (unidad) => {
+    const acciones = {
+      tabletas: 'Tomar',
+      pastillas: 'Tomar',
+      ampollas: 'Aplicar',
+      aerosol: 'Aplicar',
+      pomada: 'Aplicar',
+      crema: 'Aplicar',
+    };
+    return acciones[unidad.toLowerCase()] || 'Usar';
+  };
+
+  const obtenerIcono = (unidad) => {
+    const iconos = {
+      tabletas: 'pill',
+      pastillas: 'pill',
+      ampollas: 'needle',
+      aerosol: 'spray',
+      pomada: 'tube',
+      crema: 'tube',
+      jarabe: 'bottle-tonic',
+      gotas: 'water',
+    };
+    return iconos[unidad.toLowerCase()] || 'pill';
+  };
+
   const handleSave = async () => {
     try {
       setIsButtonDisabled(true);
     
-      const token = await getToken();
-      if (!token) {
-        Alert.alert('Error', 'Token no encontrado. Inicia sesión nuevamente.');
-        setIsButtonDisabled(false);
-        return;
-      }
-    
-      // Obtener todos los medicamentos almacenados
       const storedData = await AsyncStorage.getItem('selectedMedicamentos');
       const allMedicamentos = storedData ? JSON.parse(storedData) : [];
-  
-      // Encontrar el medicamento específico
       const dataMed = allMedicamentos.find(med => med.nombre === medicamentoNombre);
-  
-      if (!dataMed) {
-        Alert.alert('Error', 'No se encontraron datos para este medicamento.');
-        setIsButtonDisabled(false);
-        return;
-      }
-  
-      // Verificar que `dosis` contenga datos antes de enviar
+
+      if (!dataMed) throw new Error('No se encontraron datos para este medicamento.');
       if (!Array.isArray(dataMed.dosis) || dataMed.dosis.length === 0) {
-        Alert.alert('Error', 'No hay dosis guardadas para este medicamento.');
-        setIsButtonDisabled(false);
-        return;
+        throw new Error('No hay dosis guardadas para este medicamento.');
       }
-  
+
       console.log("Datos completos que se enviarán a la API:", JSON.stringify(dataMed, null, 2));
-    
-      // Enviar los datos a la API
-      await postMedicamentos(token, dataMed);
-    
+      const nuevoMedicamento = await postMedicamentos(token, dataMed);
+
+      setMedicamentos((prevMedicamentos) => [
+        ...prevMedicamentos,
+        ...nuevoMedicamento.dosis.map((dosis) => ({
+          id: nuevoMedicamento.id,
+          nombre: nuevoMedicamento.nombre,
+          hora: dosis.hora_dosis,
+          dosis: `${determinarAccion(nuevoMedicamento.unidad)} ${dosis.cantidadP} ${nuevoMedicamento.unidad}`,
+          icon: obtenerIcono(nuevoMedicamento.unidad),
+        })),
+      ]);
+
       Alert.alert('Éxito', 'Datos enviados correctamente.');
-      
-      // Limpiar AsyncStorage
       await AsyncStorage.clear();
-      
-      // Navegar a la pantalla Home
       navigation.navigate('Home');
     } catch (error) {
-      Alert.alert('Error', 'Hubo un problema al enviar los datos.');
+      Alert.alert('Error', error.message || 'Hubo un problema al enviar los datos.');
       console.error('Error al enviar datos:', error);
     } finally {
       setIsButtonDisabled(false);
@@ -89,7 +105,6 @@ const AdditionalForm = ({ navigation }) => {
         <View style={{ flex: 1, justifyContent: 'space-between' }}>
           <Text style={styles.instructionText}>Ya casi terminamos. ¿Le gustaría:</Text>
 
-          {/* Opciones adicionales */}
           <MedicationOption
             iconName="calendar"
             optionText="Establecer la duración del tratamiento"
@@ -106,7 +121,6 @@ const AdditionalForm = ({ navigation }) => {
             onPress={() => navigation.navigate('MedicationInstructions', { medicamentoNombre })}
           />
 
-          {/* Botón de guardado */}
           <SaveButton
             buttonText="Guardar"
             onPress={handleSave}

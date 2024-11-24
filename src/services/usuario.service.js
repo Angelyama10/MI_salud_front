@@ -1,21 +1,31 @@
-const ApiUrl = `${process.env.REACT_URI_API}/${process.env.Version}`;
+import { useContext } from 'react';
+import { TokenContext } from '../context/TokenContext'; // Importa el contexto del token
+import { REACT_URI_API } from '@env';
 
-export const singUp = async data => {
+const ApiUrl = `${REACT_URI_API}/users`;
+
+export const registerUser = async (userData) => {
   try {
-    const response = await fetch(`${ApiUrl}/user`, {
+    console.log("Datos que se envían a la API para registrar usuario:", userData);
+
+    const response = await fetch(ApiUrl, {
       method: 'POST',
       headers: {
-        'content-Type': 'application/json',
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(userData),
     });
 
     if (!response.ok) {
-      throw new Error('error en la creacion del usuario');
+      const errorDetails = await response.json();
+      console.error("Error al registrar usuario:", errorDetails);
+      throw new Error(errorDetails.message || 'Error al registrar usuario');
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
+    console.error("Error en registerUser:", error.message);
     throw error;
   }
 };

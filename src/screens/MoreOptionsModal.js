@@ -5,9 +5,9 @@ import Modal from 'react-native-modal';
 
 const MoreOptionsModal = ({ visible, onClose, navigation }) => {
   const options = [
-    { text: 'Agenda', iconName: 'calendar', navigateTo: 'AgendaScreen' },
-    { text: 'Cita', iconName: 'calendar-check', navigateTo: 'AppointmentScreen' },
-    { text: 'Médicos', iconName: 'doctor', navigateTo: 'AddDoctorScreen' },
+    { text: 'Agenda', iconName: 'calendar', navigateTo: 'AnotacionScreen' },
+    { text: 'Cita', iconName: 'calendar-check', navigateTo: 'MedicalAppointmentsScreen' },
+    { text: 'Médicos', iconName: 'doctor', navigateTo: 'DoctorsScreen' },
     { text: 'Configuración', iconName: 'cog', navigateTo: 'SettingsScreen' },
   ];
 

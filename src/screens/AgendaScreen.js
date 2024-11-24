@@ -35,7 +35,7 @@ const AgendaScreen = ({ navigation }) => {
                     <TouchableOpacity onPress={() => navigation.navigate('Home')}>
                         <Icon name="arrow-left" size={24} color="#ffffff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerText}>Agrega Anotación </Text>
+                    <Text style={styles.headerText}>Agregar anotación</Text>
                     <TouchableOpacity onPress={() => {/* Funcionalidad para guardar la nota */ }}>
                         <Text style={styles.buttonText}>Aceptar</Text>
                     </TouchableOpacity>
@@ -43,16 +43,18 @@ const AgendaScreen = ({ navigation }) => {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.sectionLabel}>Anotación</Text>
-                <TextInput
-                    style={styles.textInput}
-                    multiline
-                    numberOfLines={4}
-                    onChangeText={(text) => setNota(text)}
-                    value={nota}
-                    placeholder="Escribe aquí tu anotación"
-                />
-                 <DateComponent />
+            <Text style={styles.sectionLabel}>Anotación</Text>
+    <TextInput
+        style={styles.textInput}
+        multiline
+        numberOfLines={4}
+        onChangeText={(text) => setNota(text)}
+        value={nota}
+        placeholder="Escribe aquí tu anotación"
+    />
+    <View style={styles.dateContainer}>
+        <DateComponent />
+    </View>
 
                 <View style={styles.infoSection}>
                     
@@ -131,12 +133,22 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     textInput: {
-        borderColor: '#ccc',
+        borderColor: '#EAF2F8',
+        backgroundColor: '#EAF2F8',
         borderWidth: 1,
         padding: 10,
-        borderRadius: 5,
+        borderRadius: 10,
         height: 150,
         textAlignVertical: 'top',
+        fontSize: 16,
+        color: '#333',
+    },
+    dateContainer: {
+        backgroundColor: '#EAF2F8',
+        borderRadius: 10,
+        padding: 10,
+        marginTop: 20,
+        justifyContent: 'center',
     },
     infoSection: {
         marginTop: 20,
@@ -150,7 +162,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 10, // Espacio entre el componente de fecha y el tipo de anotación
+        marginTop: 10,
     },
     annotationTypeTitle: {
         fontSize: 16,
@@ -177,5 +189,6 @@ const styles = StyleSheet.create({
         color: 'red',
     },
 });
+
 
 export default AgendaScreen;

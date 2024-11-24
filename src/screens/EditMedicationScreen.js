@@ -1,251 +1,274 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
+  Modal,
+  FlatList,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import MedicationHeader from '../components/MedicationHeader';
+import { useForm, Controller } from 'react-hook-form';
+import { useRoute } from '@react-navigation/native';
+import { getMedicamentoDosisById, updateMedicamentoById } from '../services/medicamentos.service';
 
-const EditMedicationScreen = () => {
-  const navigation = useNavigation();
+const EditMedicationScreen = ({ navigation }) => {
+  const { control, handleSubmit, setValue } = useForm();
   const route = useRoute();
-  const medicamento = route.params?.medicamento || {
-    nombre: "Amoxisilina5",
-    unidad: "Tableta",
-    frecuencia: "Diaria",
-    numero_dosis: 1,
-    total_unidades: 10,
-    unidades_restantes: 10,
-    unidades_min: 8,
-    dosis: [
-      {
-        numero_dosis: 1,
-        hora_dosis: "08:00",
-        cantidadP: 2,
-        momento_comida: "antes",
+  const [medicamento, setMedicamento] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [doses, setDoses] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editedDoses, setEditedDoses] = useState([]);
+
+  const { id, token } = route.params || {};
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!token || !id) {
+        Alert.alert('Error', 'Faltan datos necesarios para cargar el medicamento.');
+        navigation.goBack();
+        return;
       }
-    ],
+
+      try {
+        const data = await getMedicamentoDosisById(token, id);
+        console.log('Datos del medicamento obtenidos:', data);
+
+        Object.keys(data).forEach((key) => {
+          if (key !== 'dosis') {
+            setValue(key, data[key]);
+          }
+        });
+        setDoses(data.dosis || []);
+        setMedicamento(data);
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo cargar la información del medicamento.');
+        console.error('Error al obtener medicamento:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, token, setValue, navigation]);
+
+  const handleUpdate = async (formData) => {
+    try {
+      setLoading(true);
+      const updatedData = { ...formData, dosis: doses };
+      await updateMedicamentoById(token, id, updatedData);
+      Alert.alert('Éxito', 'Medicamento actualizado correctamente.');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el medicamento.');
+      console.error('Error al actualizar medicamento:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [nombre, setNombre] = useState(medicamento.nombre);
-  const [unidad, setUnidad] = useState(medicamento.unidad);
-  const [frecuencia, setFrecuencia] = useState(medicamento.frecuencia);
-  const [numeroDosis, setNumeroDosis] = useState(medicamento.numero_dosis.toString());
-  const [totalUnidades, setTotalUnidades] = useState(medicamento.total_unidades.toString());
-  const [unidadesRestantes, setUnidadesRestantes] = useState(medicamento.unidades_restantes.toString());
-  const [unidadesMin, setUnidadesMin] = useState(medicamento.unidades_min.toString());
-  const [horaDosis, setHoraDosis] = useState(medicamento.dosis[0].hora_dosis);
-  const [cantidadP, setCantidadP] = useState(medicamento.dosis[0].cantidadP.toString());
-  const [momentoComida, setMomentoComida] = useState(medicamento.dosis[0].momento_comida);
+  const handleEditDoses = () => {
+    setEditedDoses([...doses]);
+    setModalVisible(true);
+  };
+
+  const handleSaveDoses = (updatedDoses) => {
+    setDoses(updatedDoses);
+    setModalVisible(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <Text>Cargando...</Text>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Encabezado */}
-      <MedicationHeader navigation={navigation} title="Editar Medicina" />
+    <View style={styles.container}>
+      <Text style={styles.title}>Editar Medicamento</Text>
 
-      {/* Header con opciones */}
-      <View style={styles.headerButtonsContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.headerButtonText}>Cancelar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Medicina</Text>
-        <TouchableOpacity onPress={() => Alert.alert('Medicamento actualizado')}>
-          <Text style={styles.headerButtonText}>Actualizar</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Nombre del Medicamento */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Nombre del medicamento</Text>
+      <Text>Nombre</Text>
+      <Controller
+        control={control}
+        name="nombre"
+        render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}
-            value={nombre}
-            onChangeText={setNombre}
+            placeholder="Nombre"
+            value={value}
+            onChangeText={onChange}
           />
-        </View>
+        )}
+      />
 
-        {/* Unidad */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Unidad</Text>
+      <Text>Unidad</Text>
+      <Controller
+        control={control}
+        name="unidad"
+        render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}
-            value={unidad}
-            onChangeText={setUnidad}
+            placeholder="Unidad"
+            value={value}
+            onChangeText={onChange}
           />
-        </View>
+        )}
+      />
 
-        {/* Frecuencia */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Frecuencia</Text>
+      <Text>Frecuencia</Text>
+      <Controller
+        control={control}
+        name="frecuencia"
+        render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}
-            value={frecuencia}
-            onChangeText={setFrecuencia}
+            placeholder="Frecuencia"
+            value={value}
+            onChangeText={onChange}
           />
-        </View>
+        )}
+      />
 
-        {/* Número de dosis */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Número de dosis</Text>
+      <Text>Unidades Restantes</Text>
+      <Controller
+        control={control}
+        name="unidades_restantes"
+        render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}
-            value={numeroDosis}
-            onChangeText={setNumeroDosis}
+            placeholder="Unidades restantes"
             keyboardType="numeric"
+            value={value !== undefined ? String(value) : ''}
+            onChangeText={(text) => onChange(text ? parseInt(text, 10) : '')}
           />
-        </View>
+        )}
+      />
 
-        {/* Dosis */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Hora de la dosis</Text>
+      <Text>Unidades Mínimas</Text>
+      <Controller
+        control={control}
+        name="unidades_min"
+        render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}
-            value={horaDosis}
-            onChangeText={setHoraDosis}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Cantidad por dosis</Text>
-          <TextInput
-            style={styles.input}
-            value={cantidadP}
-            onChangeText={setCantidadP}
+            placeholder="Unidades mínimas"
             keyboardType="numeric"
+            value={value !== undefined ? String(value) : ''}
+            onChangeText={(text) => onChange(text ? parseInt(text, 10) : '')}
           />
-        </View>
+        )}
+      />
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Momento de comida</Text>
-          <TextInput
-            style={styles.input}
-            value={momentoComida}
-            onChangeText={setMomentoComida}
-          />
-        </View>
+      {/* Botón Recordatorios */}
+      <TouchableOpacity
+        style={styles.recordatoriosButton}
+        onPress={handleEditDoses}
+      >
+        <Text style={styles.recordatoriosText}>
+          Recordatorios: {doses.map((d) => `${d.hora_dosis} (Tomar ${d.cantidadP})`).join(', ')}
+        </Text>
+      </TouchableOpacity>
 
-        {/* Total de unidades y unidades restantes */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Total de unidades</Text>
-          <TextInput
-            style={styles.input}
-            value={totalUnidades}
-            onChangeText={setTotalUnidades}
-            keyboardType="numeric"
-          />
-        </View>
+      {/* Modal para edición de dosis */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.overlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Programación</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Unidades restantes</Text>
-          <TextInput
-            style={styles.input}
-            value={unidadesRestantes}
-            onChangeText={setUnidadesRestantes}
-            keyboardType="numeric"
-          />
-        </View>
+            <FlatList
+              data={editedDoses}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              renderItem={({ item, index }) => (
+                <View style={styles.doseContainer}>
+                  <Text style={styles.doseTitle}>Dosis #{index + 1}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Hora de la dosis"
+                    value={item.hora_dosis}
+                    onChangeText={(text) => {
+                      const updatedDoses = [...editedDoses];
+                      updatedDoses[index].hora_dosis = text;
+                      setEditedDoses(updatedDoses);
+                    }}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Cantidad"
+                    keyboardType="numeric"
+                    value={String(item.cantidadP)}
+                    onChangeText={(text) => {
+                      const updatedDoses = [...editedDoses];
+                      updatedDoses[index].cantidadP = parseInt(text, 10) || 0;
+                      setEditedDoses(updatedDoses);
+                    }}
+                  />
+                </View>
+              )}
+            />
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Unidades mínimas</Text>
-          <TextInput
-            style={styles.input}
-            value={unidadesMin}
-            onChangeText={setUnidadesMin}
-            keyboardType="numeric"
-          />
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => handleSaveDoses(editedDoses)}
+              >
+                <Text style={styles.saveButtonText}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
+      </Modal>
 
-        {/* Botones de acción */}
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.suspendButton} onPress={() => Alert.alert('Medicamento suspendido')}>
-            <Text style={styles.suspendButtonText}>Suspender</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={() => Alert.alert('Medicamento borrado')}>
-            <Text style={styles.deleteButtonText}>Borrar</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit(handleUpdate)}>
+        <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-  headerButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#B5D6FD',
-  },
-  headerButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#FFF',
-    padding: 10,
-    borderRadius: 8,
-    borderColor: '#DDD',
+  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 15 },
+  recordatoriosButton: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 5,
+    marginVertical: 15,
     borderWidth: 1,
-    fontSize: 16,
-    color: '#333',
+    borderColor: '#ccc',
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-  },
-  suspendButton: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
-    width: '45%',
+  recordatoriosText: { color: '#000', fontWeight: 'bold' },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  suspendButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  deleteButton: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#FF3B30',
-    width: '45%',
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
     alignItems: 'center',
   },
-  deleteButtonText: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
+  doseContainer: { marginBottom: 15, width: '100%' },
+  doseTitle: { fontWeight: 'bold', marginBottom: 5 },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  cancelButton: { backgroundColor: '#ccc', padding: 10, borderRadius: 5, flex: 1, marginRight: 5 },
+  cancelButtonText: { color: '#000' },
+  saveButton: { backgroundColor: '#007bff', padding: 10, borderRadius: 5, flex: 1 },
+  saveButtonText: { color: '#fff' },
 });
 
 export default EditMedicationScreen;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -6,47 +6,82 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { TokenContext } from '../context/TokenContext';
+import { deleteMedicamentoById } from '../services/medicamentos.service';
+import ConfirmationModal from './ConfirmationModal'; // Modal de confirmación
 
 const { width } = Dimensions.get('window');
 
-const ModalMedicamento = ({ visible, onClose, nombre, hora, unidad, cantidad, momentoComida, icono }) => {
-  const navigation = useNavigation(); // Hook para obtener el objeto de navegación
+const ModalMedicamento = ({ visible, onClose, id, nombre, hora, unidad, cantidad = 0, momentoComida, icono }) => {
+  const navigation = useNavigation();
+  const { token, setMedicamentos } = useContext(TokenContext); // Contexto global
+  const [confirmationVisible, setConfirmationVisible] = useState(false);
+  const [actionInProgress, setActionInProgress] = useState(false);
+
+  const handleEdit = () => {
+    if (!token || token.length < 20) {
+      Alert.alert('Error', 'Token no disponible o inválido. Por favor, inicia sesión nuevamente.');
+      console.error('Token no disponible:', token);
+      return;
+    }
+  
+    if (!id) {
+      Alert.alert('Error', 'El ID del medicamento no está definido.');
+      console.error('ID del medicamento no está definido');
+      return;
+    }
+  
+    navigation.navigate('EditMedicationScreen', { id, token });
+    onClose();
+  };
+  
+
+  const handleDelete = async () => {
+    try {
+      setActionInProgress(true);
+      await deleteMedicamentoById(token, id);
+      setMedicamentos((prevMedicamentos) =>
+        prevMedicamentos.filter((medicamento) => medicamento.id !== id)
+      );
+      Alert.alert('Éxito', `El medicamento "${nombre}" ha sido eliminado.`);
+      onClose();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo eliminar el medicamento. Inténtalo nuevamente.');
+      console.error('Error al eliminar medicamento:', error);
+    } finally {
+      setActionInProgress(false);
+    }
+  };
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
               <View style={styles.header}>
-                {/* Icono del medicamento */}
                 <Icon name={icono} size={48} color="#5A9BD3" />
                 <Text style={styles.medicamentoNombre}>{nombre}</Text>
               </View>
-
-              {/* Botones de eliminar y editar */}
               <View style={styles.actionIcons}>
-                <TouchableOpacity onPress={() => console.log("Eliminar")}>
-                  <Icon name="trash-can-outline" size={24} color="#333333" />
-                </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('EditMedicationScreen', { medicamentoNombre: nombre })}
-                  style={{ marginLeft: 15 }}
+                  onPress={() => setConfirmationVisible(true)}
+                  disabled={actionInProgress}
                 >
-                  <Icon name="pencil-outline" size={24} color="#333333" />
+                  <Icon name="trash-can-outline" size={24} color={actionInProgress ? '#999999' : '#333333'} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.infoContainer}>
+                <View style={styles.infoItem}>
+                  <Icon name="identifier" size={24} color="#5A9BD3" style={styles.infoIcon} />
+                  <Text style={styles.infoText}>ID: {id}</Text>
+                </View>
                 <View style={styles.infoItem}>
                   <Icon name="calendar-clock" size={24} color="#5A9BD3" style={styles.infoIcon} />
                   <Text style={styles.infoText}>Agendado para {hora}, hoy</Text>
@@ -59,24 +94,23 @@ const ModalMedicamento = ({ visible, onClose, nombre, hora, unidad, cantidad, mo
                 </View>
               </View>
 
-              <View style={styles.actionContainer}>
-                <TouchableOpacity style={styles.actionButton} onPress={() => console.log("Pasar")}>
-                  <Icon name="close-circle-outline" size={32} color="#5A9BD3" />
-                  <Text style={styles.actionText}>Pasar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={() => console.log("Tomar")}>
-                  <Icon name="check-circle" size={32} color="#5A9BD3" />
-                  <Text style={styles.actionText}>Tomar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={() => console.log("Reprogramar")}>
-                  <Icon name="clock-outline" size={32} color="#5A9BD3" />
-                  <Text style={styles.actionText}>Reprogramar</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Botón central */}
+              <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                <Icon name="pencil-outline" size={32} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
+
+      {/* Modal de Confirmación */}
+      <ConfirmationModal
+        visible={confirmationVisible}
+        title="Eliminar Medicamento"
+        message={`¿Estás seguro de que deseas eliminar el medicamento "${nombre}"? Esta acción no se puede deshacer.`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmationVisible(false)}
+      />
     </Modal>
   );
 };
@@ -90,7 +124,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: width * 0.9,
-    backgroundColor: '#ffffff', // Fondo claro
+    backgroundColor: '#ffffff',
     borderRadius: 10,
     padding: 20,
     alignItems: 'center',
@@ -132,19 +166,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
   },
-  actionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginTop: 20,
-  },
-  actionButton: {
+  editButton: {
+    backgroundColor: '#5A9BD3', // Azulito
+    borderRadius: 50,
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  actionText: {
-    fontSize: 14,
-    color: '#5A9BD3',
-    marginTop: 5,
+    marginTop: 20,
   },
 });
 

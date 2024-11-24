@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, ScrollView, ActivityIndicator, Touc
 import DateComponent from '../components/DateComponent';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NavigationBarComponent from '../components/NavigationBarComponents';
-import ModalMedicamento from '../components/ModalMedicamento'; // Asegúrate de que la ruta sea correcta
+import ModalMedicamento from '../components/ModalMedicamento'; 
 import { getMedicamentos } from '../services/medicamentos.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -13,8 +13,6 @@ const HomeDatos = ({ navigation }) => {
   const [medicamentos, setMedicamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDay, setCurrentDay] = useState(new Date().getDate());
-
-  // Estado para el modal
   const [modalVisible, setModalVisible] = useState(false);
   const [medicamentoSeleccionado, setMedicamentoSeleccionado] = useState(null);
 
@@ -25,35 +23,32 @@ const HomeDatos = ({ navigation }) => {
     { text: 'Más', iconName: 'dots-horizontal', onPress: () => console.log('Más presionado') },
   ];
 
-  // Función para determinar la acción en base a la unidad
   const determinarAccion = (unidad) => {
     const acciones = {
-      tabletas: "Tomar",
-      pastillas: "Tomar",
-      ampollas: "Aplicar",
-      aerosol: "Aplicar",
-      pomada: "Aplicar",
-      crema: "Aplicar",
+      tabletas: 'Tomar',
+      pastillas: 'Tomar',
+      ampollas: 'Aplicar',
+      aerosol: 'Aplicar',
+      pomada: 'Aplicar',
+      crema: 'Aplicar',
     };
-    return acciones[unidad.toLowerCase()] || "Usar";
+    return acciones[unidad.toLowerCase()] || 'Usar';
   };
 
-  // Función para determinar el icono en base a la unidad
   const obtenerIcono = (unidad) => {
     const iconos = {
-      tabletas: "pill",
-      pastillas: "pill",
-      ampollas: "needle",
-      aerosol: "spray",
-      pomada: "tube",
-      crema: "tube",
-      jarabe: "bottle-tonic",
-      gotas: "water",
+      tabletas: 'pill',
+      pastillas: 'pill',
+      ampollas: 'needle',
+      aerosol: 'spray',
+      pomada: 'tube',
+      crema: 'tube',
+      jarabe: 'bottle-tonic',
+      gotas: 'water',
     };
-    return iconos[unidad.toLowerCase()] || "pill";
+    return iconos[unidad.toLowerCase()] || 'pill';
   };
 
-  // Convierte una hora en formato de 12 horas (e.g., "8:00 a.m.") a un objeto Date
   const convertirHoraAFecha = (horaStr) => {
     const [time, modifier] = horaStr.split(' ');
     let [hours, minutes] = time.split(':').map(Number);
@@ -65,16 +60,18 @@ const HomeDatos = ({ navigation }) => {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
   };
 
-  // Función para obtener los medicamentos desde la API y filtrar las dosis del día
   const fetchMedicamentos = async () => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('userToken');
-      if (!token) throw new Error("Token no disponible");
+      if (!token) throw new Error('Token no disponible');
 
       const data = await getMedicamentos(token);
-      
-      // Filtrar las dosis que son para hoy
+
+      if (!Array.isArray(data)) {
+        throw new Error('La respuesta de medicamentos no es válida.');
+      }
+
       const medicamentosTransformados = data.flatMap((med) =>
         med.dosis
           .filter((dosis) => {
@@ -86,10 +83,11 @@ const HomeDatos = ({ navigation }) => {
             );
           })
           .map((dosis) => ({
+            id: med.id,
             hora: dosis.hora_dosis,
             nombre: med.nombre,
             dosis: `${determinarAccion(med.unidad)} ${dosis.cantidadP} ${med.unidad}${
-              dosis.momento_comida ? ` ${dosis.momento_comida}` : ""
+              dosis.momento_comida ? ` ${dosis.momento_comida}` : ''
             }`,
             icon: obtenerIcono(med.unidad),
             unidad: med.unidad,
@@ -100,7 +98,8 @@ const HomeDatos = ({ navigation }) => {
 
       setMedicamentos(medicamentosTransformados);
     } catch (error) {
-      console.error("Error al cargar medicamentos:", error);
+      console.error('Error al cargar medicamentos:', error);
+      setMedicamentos([]);
     } finally {
       setLoading(false);
     }
@@ -120,8 +119,11 @@ const HomeDatos = ({ navigation }) => {
     return () => clearInterval(intervalId);
   }, [currentDay]);
 
-  // Función para abrir el modal con los datos del medicamento seleccionado
   const abrirModal = (medicamento) => {
+    if (!medicamento || !medicamento.id) {
+      console.error('Medicamento inválido:', medicamento);
+      return;
+    }
     setMedicamentoSeleccionado(medicamento);
     setModalVisible(true);
   };
@@ -134,9 +136,13 @@ const HomeDatos = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
           <ActivityIndicator size="large" color="#5A9BD3" />
-        ) : (
+        ) : medicamentos.length > 0 ? (
           medicamentos.map((medicamento, index) => (
-            <TouchableOpacity key={index} style={styles.medicamentoContainer} onPress={() => abrirModal(medicamento)}>
+            <TouchableOpacity
+              key={index}
+              style={styles.medicamentoContainer}
+              onPress={() => abrirModal(medicamento)}
+            >
               <Text style={styles.hora}>{medicamento.hora}</Text>
               <View style={styles.medicamentoCard}>
                 <Icon name={medicamento.icon} size={30} color="#555555" style={styles.icon} />
@@ -147,22 +153,23 @@ const HomeDatos = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           ))
+        ) : (
+          <Text>No hay medicamentos disponibles.</Text>
         )}
       </ScrollView>
       <NavigationBarComponent navItems={navItems} navigation={navigation} />
-
-      {/* Modal del Medicamento */}
       {medicamentoSeleccionado && (
         <ModalMedicamento
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          nombre={medicamentoSeleccionado.nombre}
-          hora={medicamentoSeleccionado.hora}
-          unidad={medicamentoSeleccionado.unidad}
-          cantidad={medicamentoSeleccionado.cantidad}
-          momentoComida={medicamentoSeleccionado.momentoComida}
-          icono={medicamentoSeleccionado.icon}
-        />
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        id={medicamentoSeleccionado?.id} // Pasar el ID
+        nombre={medicamentoSeleccionado?.nombre}
+        hora={medicamentoSeleccionado?.hora}
+        unidad={medicamentoSeleccionado?.unidad}
+        cantidad={medicamentoSeleccionado?.cantidad}
+        momentoComida={medicamentoSeleccionado?.momentoComida}
+        icono={medicamentoSeleccionado?.icon}
+      />     
       )}
     </View>
   );
@@ -179,27 +186,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
     flexGrow: 1,
   },
   medicamentoContainer: {
     marginBottom: 20,
+    backgroundColor: '#E9F7FE', // Fondo suave para separar visualmente
+    borderRadius: 10,
+    padding: 15, // Espaciado interno para el contenido
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
   },
   hora: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#555555',
-    marginBottom: 8,
+    marginBottom: 5, // Separar la hora del resto del contenido
   },
   medicamentoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F4F4F4',
-    padding: 15,
-    borderRadius: 10,
   },
   icon: {
-    marginRight: 10,
+    marginRight: 15, // Separar el ícono del texto
+    color: '#555555',
   },
   nombre: {
     fontSize: 18,
@@ -209,7 +222,15 @@ const styles = StyleSheet.create({
   dosis: {
     fontSize: 14,
     color: '#777777',
+    marginTop: 3, // Separar ligeramente las líneas de texto
+  },
+  noMedicamentos: {
+    fontSize: 16,
+    color: '#777777',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
+
 
 export default HomeDatos;

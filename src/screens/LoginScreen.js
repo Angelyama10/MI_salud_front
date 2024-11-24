@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,53 +9,76 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
 import { auth } from '../services/auth.service';
-import ErrorModal from '../components/ErrorModal';
+import { TokenContext } from '../context/TokenContext';
+import ErrorModal from '../components/ErrorModal'; // Componente del modal de error
 import { LogBox } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
 LogBox.ignoreAllLogs();
+
+const { width, height } = Dimensions.get('window');
+
+const decodeJWT = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`)
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decodificando JWT:', error);
+    return null;
+  }
+};
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [contraseña, setContraseña] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const { setToken } = useContext(TokenContext);
+
   const handleLogin = async () => {
+    if (!email || !contraseña) {
+      setErrorMessage('Por favor, ingresa el correo y la contraseña');
+      setErrorVisible(true);
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (!email || !contraseña) {
-        setErrorMessage('Por favor, ingresa el correo y la contraseña');
-        setErrorVisible(true);
-        return;
-      }
-
-      const dataUser = { email, contraseña };
-      console.log("Datos de autenticación enviados:", dataUser);
-
-      const response = await auth(dataUser);
+      const response = await auth({ email, contraseña });
 
       if (response?.access_token) {
-        console.log("Token recibido:", response.access_token);
+        const decodedToken = decodeJWT(response.access_token);
+        console.log('Datos decodificados del JWT:', decodedToken);
 
-        // Guardar el token en AsyncStorage
-        await AsyncStorage.setItem('userToken', response.access_token);
+        const userId = decodedToken?.sub;
+        const userName = decodedToken?.username;
+
+        if (!userId || !userName) throw new Error('Datos de usuario incompletos en el token');
+
+        await setToken(response.access_token, userId, userName);
 
         navigation.navigate('Home');
       } else {
-        setErrorMessage('Usuario o contraseña incorrectos. Intenta de nuevo o restablece tu contraseña.');
-        setErrorVisible(true);
+        throw new Error('Usuario o contraseña incorrectos.');
       }
     } catch (error) {
-      const errorMsg = error.message.includes('Error en autenticación') ?
-        'Usuario o contraseña incorrectos. Intenta de nuevo o restablece tu contraseña.' :
-        'Hubo un problema al iniciar sesión. Por favor, intenta de nuevo.';
-      setErrorMessage(errorMsg);
+      console.error('Error en login:', error);
+      setErrorMessage(error.message || 'Error al iniciar sesión. Intenta de nuevo.');
       setErrorVisible(true);
-      console.error("Error en login:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,12 +87,7 @@ const LoginScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <LinearGradient
-        colors={['#B5D6FD', '#FFFFFF']}
-        style={styles.background}
-      >
-        <View style={styles.topDecoration} />
-
+      <LinearGradient colors={['#B5D6FD', '#FFFFFF']} style={styles.background}>
         <View style={styles.contentContainer}>
           <View style={styles.topContainer}>
             <Text style={styles.welcomeText}>Bienvenido</Text>
@@ -82,38 +100,35 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.formContainer}>
             <Text style={styles.loginText}>Iniciar sesión</Text>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Correo electrónico"
-                placeholderTextColor="#888"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Correo electrónico"
+              placeholderTextColor="#888"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Contraseña"
-                placeholderTextColor="#888"
-                secureTextEntry
-                value={contraseña}
-                onChangeText={setContraseña}
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Contraseña"
+              placeholderTextColor="#888"
+              secureTextEntry
+              value={contraseña}
+              onChangeText={setContraseña}
+            />
+
+            {loading ? (
+              <ActivityIndicator size="large" color="#5A9BD3" />
+            ) : (
+              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                <Text style={styles.loginButtonText}>Entrar</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
-              style={styles.loginButton}
-              onPress={handleLogin}
-            >
-              <Text style={styles.loginButtonText}>Entrar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                // Navegar a la pantalla de recuperación de contraseña
-              }}
+              onPress={() => console.log('Navegación a recuperación de contraseña')}
             >
               <Text style={styles.forgotPasswordText}>Recuperar contraseña</Text>
             </TouchableOpacity>
@@ -121,15 +136,14 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.registerContainer}>
               <Text style={styles.noAccountText}>¿No tienes una cuenta?</Text>
               <TouchableOpacity
+                style={styles.registerButton}
                 onPress={() => navigation.navigate('Nuevo')}
               >
-                <Text style={styles.registerText}>Regístrate</Text>
+                <Text style={styles.registerButtonText}>Regístrate</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-
-        <View style={styles.bottomDecoration} />
 
         <ErrorModal
           visible={errorVisible}
@@ -140,6 +154,7 @@ const LoginScreen = ({ navigation }) => {
     </KeyboardAvoidingView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -150,26 +165,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
-  },
-  topDecoration: {
-    position: 'absolute',
-    top: -height * 0.1,
-    left: -width * 0.3,
-    width: width * 1,
-    height: width * 1,
-    backgroundColor: '#5A9BD3',
-    borderRadius: width * 0.5,
-    opacity: 0.2,
-  },
-  bottomDecoration: {
-    position: 'absolute',
-    bottom: -height * 0.1,
-    right: -width * 0.3,
-    width: width * 1,
-    height: width * 1,
-    backgroundColor: '#5A9BD3',
-    borderRadius: width * 0.5,
-    opacity: 0.2,
+    paddingHorizontal: '8%',
   },
   topContainer: {
     alignItems: 'center',
@@ -187,7 +183,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   formContainer: {
-    paddingHorizontal: '8%',
     alignItems: 'center',
     marginTop: height * 0.02,
   },
@@ -196,10 +191,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: height * 0.02,
     fontWeight: 'bold',
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: height * 0.015,
   },
   input: {
     width: '100%',
@@ -211,6 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     fontSize: width * 0.045,
     color: '#000',
+    marginBottom: height * 0.015,
   },
   loginButton: {
     width: '100%',
@@ -241,11 +233,17 @@ const styles = StyleSheet.create({
     fontSize: width * 0.042,
     color: '#000',
   },
-  registerText: {
-    fontSize: width * 0.042,
-    color: '#5A9BD3',
+  registerButton: {
     marginLeft: width * 0.01,
-    textDecorationLine: 'underline',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#5A9BD3',
+    borderRadius: width * 0.02,
+  },
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: width * 0.042,
+    fontWeight: 'bold',
   },
 });
 
