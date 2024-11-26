@@ -6,7 +6,7 @@ import {
   Alert,
   TouchableOpacity,
   StyleSheet,
-  Platform,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { getUserById, deleteUserById, updateUserById } from '../services/usuario.service';
@@ -23,11 +23,11 @@ const UserManagementScreen = ({ route, navigation }) => {
     fechaN: '',
     sexo: '',
     email: '',
-    contraseña: '******',
-    confirmarC: '******',
+    nuevaContraseña: '',
+    confirmarContraseña: '',
   });
 
-  const [isPasswordVisible, setPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (userId) handleFetchUser();
@@ -35,7 +35,10 @@ const UserManagementScreen = ({ route, navigation }) => {
 
   const handleFetchUser = async () => {
     try {
+      setLoading(true);
       const user = await getUserById(userId, token);
+      console.log('Usuario cargado desde el servidor:', user);
+
       setForm({
         id: user.id,
         nombre: user.nombre || '',
@@ -43,69 +46,19 @@ const UserManagementScreen = ({ route, navigation }) => {
         fechaN: user.fechaN ? user.fechaN.split('T')[0] : '',
         sexo: user.sexo || '',
         email: user.email || '',
-        contraseña: '******', // Ocultamos inicialmente la contraseña
-        confirmarC: '******', // Ocultamos inicialmente la contraseña
+        nuevaContraseña: '',
+        confirmarContraseña: '',
       });
     } catch (error) {
+      console.error('Error al cargar el usuario:', error);
       Alert.alert('Error', 'No se pudo cargar los datos del usuario.');
-    }
-  };
-
-  const handleShowPassword = () => {
-    const verifyPassword = async (input) => {
-      try {
-        if (input === 'your-verification-method') {
-          const user = await getUserById(userId, token);
-          setForm((prevForm) => ({
-            ...prevForm,
-            contraseña: user.contraseña,
-            confirmarC: user.confirmarC,
-          }));
-          setPasswordVisible(true);
-        } else {
-          Alert.alert('Error', 'Contraseña incorrecta o dispositivo no autorizado.');
-        }
-      } catch (error) {
-        Alert.alert('Error', 'No se pudo verificar la contraseña.');
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Ver Contraseña',
-        'Ingresa tu contraseña o valida tu identidad:',
-        (input) => verifyPassword(input),
-        'secure-text',
-      );
-    } else {
-      Alert.alert(
-        'Ver Contraseña',
-        'Por favor, valida tu identidad para mostrar la contraseña.',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Aceptar',
-            onPress: async () => {
-              // Lógica para Android
-              const user = await getUserById(userId, token); // Aquí puedes simular validación
-              setForm((prevForm) => ({
-                ...prevForm,
-                contraseña: user.contraseña,
-                confirmarC: user.confirmarC,
-              }));
-              setPasswordVisible(true);
-            },
-          },
-        ],
-      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSaveUpdates = async () => {
-    if (form.contraseña !== form.confirmarC) {
+    if (form.nuevaContraseña && form.nuevaContraseña !== form.confirmarContraseña) {
       return Alert.alert('Error', 'Las contraseñas no coinciden.');
     }
 
@@ -116,39 +69,54 @@ const UserManagementScreen = ({ route, navigation }) => {
         fechaN: form.fechaN,
         sexo: form.sexo,
         email: form.email,
-        ...(isPasswordVisible && { contraseña: form.contraseña }),
+        ...(form.nuevaContraseña && { contraseña: form.nuevaContraseña }),
       };
+
+      console.log('Datos enviados para actualización:', updatedUser);
 
       await updateUserById(userId, updatedUser, token);
 
-      // Actualiza los datos del usuario en el contexto
       updateUserData({ userName: form.nombre });
 
       Alert.alert('Éxito', 'Usuario actualizado correctamente.');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar los datos del usuario.');
+      console.error('Error al actualizar usuario:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'No se pudo actualizar los datos del usuario.'
+      );
     }
   };
 
   const handleDeleteAccount = async () => {
     try {
       await deleteUserById(userId, token);
-      Alert.alert('Cuenta eliminada', 'El usuario ha sido eliminado.');
-      setToken(null); // Cierra la sesión automáticamente
-      navigation.replace('LoginScreen');
+      Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada exitosamente.');
+      setToken(null); // Eliminar token y cerrar sesión
+      navigation.replace('Login'); // Redirigir al login
     } catch (error) {
-      Alert.alert('Error', 'No se pudo eliminar la cuenta.');
+      console.error('Error al eliminar cuenta:', error);
+      Alert.alert('Error', error.message || 'No se pudo eliminar tu cuenta.');
     }
   };
+  
 
   const handleLogout = () => {
     setToken(null);
-    navigation.replace('LoginScreen');
+    navigation.replace('Login');
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Cargando...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Gestión de Usuario</Text>
 
       {/* Campos del formulario */}
@@ -182,18 +150,22 @@ const UserManagementScreen = ({ route, navigation }) => {
         value={form.email}
         onChangeText={(text) => setForm({ ...form, email: text })}
       />
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Contraseña"
-          secureTextEntry={!isPasswordVisible}
-          value={form.contraseña}
-          editable={false} // No editable hasta que se valide
-        />
-        <TouchableOpacity onPress={handleShowPassword}>
-          <Icon name="eye-outline" size={24} color="#555" />
-        </TouchableOpacity>
-      </View>
+
+      {/* Sección de cambio de contraseña */}
+      <TextInput
+        style={styles.input}
+        placeholder="Nueva Contraseña (opcional)"
+        secureTextEntry
+        value={form.nuevaContraseña}
+        onChangeText={(text) => setForm({ ...form, nuevaContraseña: text })}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirmar Nueva Contraseña"
+        secureTextEntry
+        value={form.confirmarContraseña}
+        onChangeText={(text) => setForm({ ...form, confirmarContraseña: text })}
+      />
 
       {/* Botones */}
       <View style={styles.buttonContainer}>
@@ -210,7 +182,7 @@ const UserManagementScreen = ({ route, navigation }) => {
         <Icon name="log-out-outline" size={24} color="#fff" />
         <Text style={styles.logoutText}>Cerrar Sesión</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -234,10 +206,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingHorizontal: 10,
     backgroundColor: '#fff',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -269,6 +237,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

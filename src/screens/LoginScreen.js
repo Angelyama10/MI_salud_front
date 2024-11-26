@@ -127,11 +127,7 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              onPress={() => console.log('Navegación a recuperación de contraseña')}
-            >
-              <Text style={styles.forgotPasswordText}>Recuperar contraseña</Text>
-            </TouchableOpacity>
+            
 
             <View style={styles.registerContainer}>
               <Text style={styles.noAccountText}>¿No tienes una cuenta?</Text>

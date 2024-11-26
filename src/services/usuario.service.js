@@ -47,13 +47,18 @@ export const deleteUserById = async (id, token) => {
       },
     });
 
+    const data = await response.json();
+
+    // Si la respuesta no es exitosa pero contiene un mensaje de éxito
     if (!response.ok) {
-      const errorDetails = await response.json();
-      console.error("Error al eliminar usuario:", errorDetails);
-      throw new Error(errorDetails.message || 'Error al eliminar usuario');
+      if (data.message?.includes('successfully deleted')) {
+        console.warn("El servidor retornó un estado inesperado, pero la cuenta fue eliminada.");
+        return data;
+      }
+      console.error("Error al eliminar usuario:", data);
+      throw new Error(data.message || 'Error al eliminar usuario');
     }
 
-    const data = await response.json();
     console.log("Usuario eliminado correctamente:", data);
     return data;
   } catch (error) {
@@ -61,6 +66,7 @@ export const deleteUserById = async (id, token) => {
     throw error;
   }
 };
+
 
 // Actualizar usuario
 export const updateUserById = async (id, updatedData, token) => {
@@ -92,6 +98,32 @@ export const updateUserById = async (id, updatedData, token) => {
     return data;
   } catch (error) {
     console.error("Error en updateUserById:", error.message);
+    throw error;
+  }
+};
+
+// Obtener la contraseña desencriptada
+export const getDecryptedPassword = async (userId, token) => {
+  try {
+    const response = await fetch(`${ApiUrl}/decrypt-password/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error('Error en la respuesta al desencriptar la contraseña:', errorDetails);
+      throw new Error(errorDetails.message || 'Error al desencriptar la contraseña.');
+    }
+
+    const data = await response.json();
+    console.log('Contraseña desencriptada obtenida del servidor:', data);
+    return data.password; // Asegúrate de que el servidor retorne la contraseña en este formato
+  } catch (error) {
+    console.error('Error al obtener la contraseña desencriptada:', error);
     throw error;
   }
 };
