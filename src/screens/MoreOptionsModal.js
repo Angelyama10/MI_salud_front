@@ -9,7 +9,9 @@ const MoreOptionsModal = ({ visible, onClose, navigation }) => {
     { text: 'Cita', iconName: 'calendar-check', navigateTo: 'MedicalAppointmentsScreen' },
     { text: 'Médicos', iconName: 'doctor', navigateTo: 'DoctorsScreen' },
     { text: 'Configuración', iconName: 'cog', navigateTo: 'SettingsScreen' },
+    { text: 'Agregar Medicamento', iconName: 'pill', navigateTo: 'Search' }, // Reemplazado por "pill"
   ];
+ 
 
   const handleOptionPress = (navigateTo) => {
     onClose(); // Cierra el modal
@@ -60,7 +62,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5, // Para Android
-    // Centra el modal verticalmente
     alignSelf: 'flex-end',
     marginRight: 0, // Alinea el modal a la derecha
     marginBottom: 0,

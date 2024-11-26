@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, ScrollView, SafeAreaView, StatusBar, StyleSheet, Text, Dimensions } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MedicationHeader from '../components/MedicationHeader';
 import MedicationOption from '../components/MedicationOption';
@@ -12,61 +12,68 @@ const MedicationScreen = ({ navigation }) => {
   const { medicamentoNombre } = route.params;
   const [storedMedicamentos, setStoredMedicamentos] = useState([]);
 
+  // Cargar medicamentos desde AsyncStorage al montar
   useEffect(() => {
     const loadStoredMedicamentos = async () => {
-      const storedData = await AsyncStorage.getItem('selectedMedicamentos');
-      setStoredMedicamentos(storedData ? JSON.parse(storedData) : []);
+      try {
+        const storedData = await AsyncStorage.getItem('selectedMedicamentos');
+        setStoredMedicamentos(storedData ? JSON.parse(storedData) : []);
+      } catch (error) {
+        console.error('Error cargando medicamentos:', error);
+      }
     };
     loadStoredMedicamentos();
   }, []);
 
-  // Función para guardar frecuencia y número de dosis seleccionada
-  const handleSaveFrequency = async (numeroDosis, descripcion) => {
-    try {
-      const storedData = await AsyncStorage.getItem('selectedMedicamentos');
-      const parsedData = storedData ? JSON.parse(storedData) : [];
-
-      // Actualizar medicamento con frecuencia y número de dosis
-      const updatedData = parsedData.map((medicamento) => {
-        if (medicamento.nombre === medicamentoNombre) {
-          return { 
-            ...medicamento, 
-            numero_dosis: numeroDosis, 
-            frecuencia: descripcion,
-            dosis: medicamento.dosis || [] // Asegura que `dosis` está inicializado
-          };
+  // Limpiar AsyncStorage al salir de la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      const clearAsyncStorage = async () => {
+        try {
+          await AsyncStorage.removeItem('selectedMedicamentos');
+          console.log('AsyncStorage limpiado al salir de MedicationScreen.');
+        } catch (error) {
+          console.error('Error limpiando AsyncStorage:', error);
         }
-        return medicamento;
-      });
+      };
 
-      await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
-      console.log('Frecuencia guardada en AsyncStorage:', descripcion);
-    } catch (error) {
-      console.error('Error guardando la frecuencia:', error);
-    }
-  };
+      return () => {
+        clearAsyncStorage();
+      };
+    }, [])
+  );
 
-  // Función para añadir dosis al array de dosis existente
-  const handleAddDoses = async (doses) => {
+  // Guardar configuración de frecuencia y dosis
+  const handleSaveFrequencyAndDoses = async (numeroDosis, frecuencia, doses) => {
     try {
       const storedData = await AsyncStorage.getItem('selectedMedicamentos');
       const parsedData = storedData ? JSON.parse(storedData) : [];
 
       const updatedData = parsedData.map((medicamento) => {
         if (medicamento.nombre === medicamentoNombre) {
-          const existingDoses = medicamento.dosis || []; // Asegura que `dosis` es un array
+          // Generar IDs únicos para cada dosis
+          const dosesWithIds = doses.map((dosis, index) => ({
+            ...dosis,
+            id: medicamento.dosis?.length + index + 1 || index + 1, // ID incremental basado en dosis existentes
+          }));
+
           return {
             ...medicamento,
-            dosis: [...existingDoses, ...doses], // Agrega nuevas dosis al final de `dosis`
+            frecuencia, // Actualizamos la frecuencia
+            numero_dosis: numeroDosis,
+            total_unidades: medicamento.total_unidades || 500, // Valor inicial o mantenemos el existente
+            unidades_restantes: medicamento.unidades_restantes || 500, // Valor inicial o mantenemos el existente
+            unidades_min: medicamento.unidades_min || 8, // Valor inicial
+            dosis: [...(medicamento.dosis || []), ...dosesWithIds], // Combinamos las dosis existentes con las nuevas
           };
         }
         return medicamento;
       });
 
       await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
-      console.log('Dosis añadidas en AsyncStorage:', doses);
+      console.log('Frecuencia y dosis actualizadas en AsyncStorage:', updatedData);
     } catch (error) {
-      console.error('Error añadiendo la dosis:', error);
+      console.error('Error guardando frecuencia y dosis:', error);
     }
   };
 
@@ -86,14 +93,14 @@ const MedicationScreen = ({ navigation }) => {
           <MedicationOption
             optionText="Una vez al día"
             onPress={() => {
-              handleSaveFrequency(1, 'Una vez al día');
-              handleAddDoses([
+              handleSaveFrequencyAndDoses(1, 'Diaria', [
                 {
                   numero_dosis: 1,
                   hora_dosis: '08:00',
-                  cantidadP: 1,
                   momento_comida: 'antes',
-                }
+                  cantidadP: 1,
+                  suministrada: false,
+                },
               ]);
               navigation.navigate('UnaVezAlDiaScreen', { medicamentoNombre });
             }}
@@ -101,20 +108,21 @@ const MedicationScreen = ({ navigation }) => {
           <MedicationOption
             optionText="Dos veces al día"
             onPress={() => {
-              handleSaveFrequency(2, 'Dos veces al día');
-              handleAddDoses([
+              handleSaveFrequencyAndDoses(2, 'Diaria', [
                 {
                   numero_dosis: 1,
                   hora_dosis: '08:00',
-                  cantidadP: 1,
                   momento_comida: 'antes',
+                  cantidadP: 1,
+                  suministrada: false,
                 },
                 {
                   numero_dosis: 2,
                   hora_dosis: '20:00',
+                  momento_comida: 'después',
                   cantidadP: 1,
-                  momento_comida: 'antes',
-                }
+                  suministrada: false,
+                },
               ]);
               navigation.navigate('TwiceaDay', { medicamentoNombre });
             }}
@@ -122,26 +130,28 @@ const MedicationScreen = ({ navigation }) => {
           <MedicationOption
             optionText="Tres veces al día"
             onPress={() => {
-              handleSaveFrequency(3, 'Tres veces al día');
-              handleAddDoses([
+              handleSaveFrequencyAndDoses(3, 'Diaria', [
                 {
                   numero_dosis: 1,
                   hora_dosis: '08:00',
-                  cantidadP: 1,
                   momento_comida: 'antes',
+                  cantidadP: 2,
+                  suministrada: false,
                 },
                 {
                   numero_dosis: 2,
                   hora_dosis: '14:00',
+                  momento_comida: 'durante',
                   cantidadP: 1,
-                  momento_comida: 'antes',
+                  suministrada: false,
                 },
                 {
                   numero_dosis: 3,
                   hora_dosis: '20:00',
+                  momento_comida: 'después',
                   cantidadP: 1,
-                  momento_comida: 'antes',
-                }
+                  suministrada: false,
+                },
               ]);
               navigation.navigate('ThreeTimesADay', { medicamentoNombre });
             }}
@@ -149,6 +159,7 @@ const MedicationScreen = ({ navigation }) => {
           <MedicationOption
             optionText="Según sea necesario (sin recordatorio)"
             onPress={() => {
+              handleSaveFrequencyAndDoses(0, 'Según sea necesario', []);
               navigation.navigate('ScreenAsNeeded', { medicamentoNombre });
             }}
           />
@@ -163,7 +174,6 @@ const MedicationScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {

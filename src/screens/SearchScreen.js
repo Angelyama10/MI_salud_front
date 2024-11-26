@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, Dimensions, FlatList, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FrascoImage from '../../assets/images/frasco.png';
 import medicamentos from '../../assets/mockData/medicamentos.json';
@@ -13,6 +13,7 @@ const SearchScreen = () => {
   const [filteredMedicamentos, setFilteredMedicamentos] = useState([]);
   const navigation = useNavigation();
 
+  // Filtrar medicamentos
   useEffect(() => {
     if (searchQuery.length >= 3) {
       const filteredData = medicamentos.filter((medicamento) =>
@@ -24,31 +25,39 @@ const SearchScreen = () => {
     }
   }, [searchQuery]);
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
+  // Limpiar AsyncStorage al salir
+  useFocusEffect(
+    useCallback(() => {
+      console.log('SearchScreen montada');
+      return () => {
+        AsyncStorage.removeItem('selectedMedicamentos')
+          .then(() => console.log('AsyncStorage limpiado'))
+          .catch((error) => console.error('Error al limpiar AsyncStorage:', error));
+      };
+    }, [])
+  );
 
-  // Función para guardar en AsyncStorage con dosis inicializado
+  const handleSearch = (query) => setSearchQuery(query);
+
   const handleSaveToStorage = async (medicamento) => {
     try {
-      const { id, ...medicamentoSinId } = medicamento;
       const storedData = await AsyncStorage.getItem('selectedMedicamentos');
       const parsedData = storedData ? JSON.parse(storedData) : [];
 
-      // Crear el medicamento con dosis inicializado
       const medicamentoConDosis = {
-        ...medicamentoSinId,
-        dosis: [],  // Inicializamos el array de dosis vacío
-        numero_dosis: 0,  // Valor inicial para número de dosis
-        frecuencia: '',    // Valor inicial para frecuencia
+        ...medicamento,
+        dosis: [],
+        numero_dosis: 0,
+        frecuencia: '',
       };
 
-      // Agregar el medicamento seleccionado, evitando duplicados
-      const updatedData = parsedData.filter(m => m.nombre !== medicamentoConDosis.nombre);
+      const updatedData = parsedData.filter(
+        (m) => !(m.nombre === medicamentoConDosis.nombre && m.presentacion === medicamentoConDosis.presentacion)
+      );
       updatedData.push(medicamentoConDosis);
 
       await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
-      console.log('Medicamento guardado en AsyncStorage:', medicamentoConDosis);
+      console.log('Medicamento guardado:', medicamentoConDosis);
     } catch (error) {
       console.error('Error guardando el medicamento:', error);
     }
@@ -59,9 +68,7 @@ const SearchScreen = () => {
     navigation.navigate('MedicationScreen', { medicamentoNombre: medicamento.nombre });
   };
 
-  const handleNavigateToPresentation = () => {
-    navigation.navigate('PresentationScreen', { medicamentoNombre: searchQuery });
-  };
+  const handleNavigateToPresentation = () => navigation.navigate('PresentationScreen', { medicamentoNombre: searchQuery });
 
   const renderMedicamento = ({ item }) => (
     <TouchableOpacity onPress={() => handleNavigateToMedication(item)}>
@@ -74,7 +81,6 @@ const SearchScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Contenedor Azul */}
       <View style={styles.topContainer}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')}>
@@ -83,7 +89,6 @@ const SearchScreen = () => {
           <Text style={styles.headerText}>Agrega tus medicamentos</Text>
         </View>
         <Text style={styles.subHeaderText}>¿Qué medicamento quiere agregar?</Text>
-
         <View style={styles.searchContainer}>
           <Icon name="search" size={20} color="#666" />
           <TextInput
@@ -95,7 +100,6 @@ const SearchScreen = () => {
         </View>
       </View>
 
-      {/* Contenedor Blanco con bordes redondeados */}
       <View style={styles.bottomContainer}>
         {filteredMedicamentos.length === 0 && searchQuery.length < 3 ? (
           <View style={styles.imageContainer}>
@@ -127,7 +131,6 @@ const SearchScreen = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

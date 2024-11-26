@@ -8,13 +8,12 @@ import DosisInputRow from '../components/DosisInputRow';
 import SaveButton from '../components/SaveButton';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 const TwiceaDay = ({ navigation }) => {
   const route = useRoute();
   const medicamentoNombre = route.params?.medicamentoNombre || 'Nombre del medicamento';
 
-  // Estados para las horas de las tomas y la dosis
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [selectedTime1, setSelectedTime1] = useState('8:00 a.m.');
   const [selectedTime2, setSelectedTime2] = useState('8:00 p.m.');
@@ -41,45 +40,45 @@ const TwiceaDay = ({ navigation }) => {
     hideDatePicker();
   };
 
-  // Función para guardar ambas dosis en AsyncStorage sin duplicar el array
   const handleSaveDoseTimes = async () => {
     try {
-      // Obtener todos los medicamentos almacenados
       const storedData = await AsyncStorage.getItem('selectedMedicamentos');
-      const allMedicamentos = storedData ? JSON.parse(storedData) : [];
+      const parsedData = storedData ? JSON.parse(storedData) : [];
 
-      // Encontrar el medicamento específico
-      const updatedData = allMedicamentos.map((medicamento) => {
+      const updatedData = parsedData.map((medicamento) => {
         if (medicamento.nombre === medicamentoNombre) {
           const existingDoses = Array.isArray(medicamento.dosis) ? medicamento.dosis : [];
 
-          // Actualizar los horarios y cantidad en las dosis ya existentes, sin duplicar el array
-          const updatedDoses = [
+          const updatedDoses = existingDoses.filter(
+            (dosis) => dosis.numero_dosis !== 1 && dosis.numero_dosis !== 2
+          );
+
+          updatedDoses.push(
             {
               numero_dosis: 1,
               hora_dosis: selectedTime1,
               cantidadP: parseInt(dosis1, 10),
-              momento_comida: 'antes', // Ajustar según la lógica de la app
+              momento_comida: 'antes',
+              suministrada: false,
             },
             {
               numero_dosis: 2,
               hora_dosis: selectedTime2,
               cantidadP: parseInt(dosis2, 10),
-              momento_comida: 'antes', // Ajustar también según sea necesario
-            },
-          ];
+              momento_comida: 'antes',
+              suministrada: false,
+            }
+          );
 
-          // Retornar el medicamento actualizado sin duplicar `dosis`
           return {
             ...medicamento,
-            numero_dosis: updatedDoses.length, // Actualiza el número de dosis total
+            numero_dosis: updatedDoses.length,
             dosis: updatedDoses,
           };
         }
         return medicamento;
       });
 
-      // Guardar los datos actualizados en AsyncStorage
       await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
       console.log('Dosis actualizadas en AsyncStorage:', updatedData);
 
@@ -93,7 +92,6 @@ const TwiceaDay = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Usa el componente MedicationHeader */}
       <MedicationHeader
         navigation={navigation}
         title={medicamentoNombre}
@@ -102,7 +100,6 @@ const TwiceaDay = ({ navigation }) => {
       />
 
       <View style={styles.lowerSection}>
-        {/* Primera Toma */}
         <TimePickerRow
           selectedTime={selectedTime1}
           onPress={() => showDatePicker('primera')}
@@ -114,7 +111,6 @@ const TwiceaDay = ({ navigation }) => {
           label="Dosis (pastilla(s))"
         />
 
-        {/* Segunda Toma */}
         <TimePickerRow
           selectedTime={selectedTime2}
           onPress={() => showDatePicker('segunda')}
@@ -126,14 +122,9 @@ const TwiceaDay = ({ navigation }) => {
           label="Dosis (pastilla(s))"
         />
 
-        {/* Botón Guardar */}
-        <SaveButton
-          buttonText="Guardar"
-          onPress={handleSaveDoseTimes}
-        />
+        <SaveButton buttonText="Guardar" onPress={handleSaveDoseTimes} />
       </View>
 
-      {/* DateTime Picker */}
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
         mode="time"
@@ -144,6 +135,7 @@ const TwiceaDay = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

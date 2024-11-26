@@ -32,12 +32,13 @@ export const getAgendas = async (token) => {
 // Crear una nueva agenda
 export const postAgenda = async (token, agendaData) => {
   try {
-    console.log("Datos que se envían a la API para crear agenda:", agendaData);
+    console.log('Token usado en postAgenda:', token);
+    console.log('Datos enviados a la API:', agendaData);
 
     const response = await fetch(ApiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(agendaData),
@@ -50,10 +51,10 @@ export const postAgenda = async (token, agendaData) => {
     }
 
     const data = await response.json();
-    console.log("Agenda creada correctamente:", data);
+    console.log('Respuesta de la API:', data);
     return data;
   } catch (error) {
-    console.error("Error en postAgenda:", error);
+    console.error('Error en postAgenda:', error);
     throw error;
   }
 };
@@ -61,7 +62,7 @@ export const postAgenda = async (token, agendaData) => {
 // Obtener una agenda por ID
 export const getAgendaById = async (token, id) => {
   try {
-    const url = `${ApiUrl}/detail?id=${id}`;
+    const url = `${ApiUrl}/view?id=${id}`;
     console.log("URL utilizada para obtener agenda por ID:", url);
 
     const response = await fetch(url, {

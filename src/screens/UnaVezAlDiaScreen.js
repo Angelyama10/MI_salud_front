@@ -12,8 +12,8 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
   const { medicamentoNombre } = route.params;
   const [visible, setVisible] = useState(false);
   const [selectedTime, setSelectedTime] = useState("10:00 AM");
-  const [doseAmount, setDoseAmount] = useState("1"); // Estado para la cantidad de dosis
-  const [selectedMoment, setSelectedMoment] = useState("antes"); // Momento de la comida
+  const [doseAmount, setDoseAmount] = useState("1");
+  const [selectedMoment, setSelectedMoment] = useState("antes");
 
   const onConfirm = ({ hours, minutes }) => {
     const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -23,55 +23,39 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
     setVisible(false);
   };
 
-  // Función para guardar la dosis completa en AsyncStorage sin sobrescribir el array de `dosis`
   const handleSaveTime = async () => {
     try {
-      // Recuperar los datos almacenados
       const storedData = await AsyncStorage.getItem('selectedMedicamentos');
       const parsedData = storedData ? JSON.parse(storedData) : [];
-  
-      // Actualizar el medicamento sin crear un nuevo objeto de dosis
+
       const updatedData = parsedData.map((medicamento) => {
         if (medicamento.nombre === medicamentoNombre) {
           const existingDoses = Array.isArray(medicamento.dosis) ? medicamento.dosis : [];
-          
-          // Actualizar la última dosis en el array `dosis` existente
-          if (existingDoses.length > 0) {
-            // Actualiza los datos de la última dosis
-            existingDoses[existingDoses.length - 1] = {
-              ...existingDoses[existingDoses.length - 1],
-              hora_dosis: selectedTime,
-              cantidadP: parseInt(doseAmount, 10),
-              momento_comida: selectedMoment,
-            };
-          } else {
-            // Si no hay dosis, crea la primera entrada
-            existingDoses.push({
-              numero_dosis: 1,
-              hora_dosis: selectedTime,
-              cantidadP: parseInt(doseAmount, 10),
-              momento_comida: selectedMoment,
-            });
-          }
-  
-          // Retornar el medicamento actualizado con `numero_dosis` ajustado
-          return { 
-            ...medicamento, 
-            numero_dosis: existingDoses.length,  // Actualiza el número de dosis total
-            dosis: existingDoses // Mantiene el array de dosis existente
+          const updatedDoses = existingDoses.filter((dosis) => dosis.numero_dosis !== 1);
+          updatedDoses.push({
+            numero_dosis: 1,
+            hora_dosis: selectedTime,
+            cantidadP: parseInt(doseAmount, 10),
+            momento_comida: selectedMoment,
+            suministrada: false,
+          });
+
+          return {
+            ...medicamento,
+            numero_dosis: updatedDoses.length,
+            dosis: updatedDoses,
           };
         }
         return medicamento;
       });
-  
-      // Guardar los datos actualizados
+
       await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
       console.log('Dosis actualizada en AsyncStorage:', updatedData);
     } catch (error) {
       console.error('Error guardando la información de la dosis:', error);
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#B5D6FD" barStyle="light-content" />
@@ -89,7 +73,6 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.bottomContainer}>
-        {/* Nueva sección para cantidad de dosis */}
         <View style={styles.doseContainer}>
           <Text style={styles.doseLabel}>Tomar</Text>
           <TextInput
@@ -101,7 +84,6 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
           <Text style={styles.doseLabel}>pastilla(s)</Text>
         </View>
 
-        {/* Sección de selección de hora */}
         <TouchableOpacity style={styles.timePicker} onPress={() => setVisible(true)}>
           <Text style={styles.timePickerText}>Tomar a las</Text>
           <Text style={styles.selectedTime}>{selectedTime}</Text>
@@ -110,7 +92,7 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.button}
           onPress={async () => {
-            await handleSaveTime();  // Guardar la información de la dosis en AsyncStorage
+            await handleSaveTime();
             navigation.navigate('AdditionalForm', { medicamentoNombre });
           }}
         >
@@ -129,7 +111,6 @@ const UnaVezAlDiaScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {

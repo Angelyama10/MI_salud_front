@@ -24,7 +24,6 @@ import ThreeTimesADay from './src/screens/ThreeTimesADay';
 import MedicationProgram from './src/screens/MedicationProgram';
 import MoreOptionsModal from './src/screens/MoreOptionsModal';
 import AgendaScreen from './src/screens/AgendaScreen';
-import Medicines from './src/screens/Medicines';
 import HomeDatos from './src/screens/HomeDatos';
 import ReminderSettings from './src/screens/ReminderSettings';
 import DailyReminderSettings from './src/screens/DailyReminderSettings';
@@ -37,6 +36,12 @@ import EditarFrecuenciaScreen from './src/screens/EditarFrecuenciaScreen';
 import DoctorsScreen from './src/screens/DoctorsScreen';
 import AppointmentScreen from './src/screens/AppointmentScreen';
 import AddDoctorScreen from './src/screens/AddDoctorScreen';
+import EditDosesScreen from './src/screens/EditDosesScreen';
+import AgendaDetailScreen from './src/screens/AgendaDetailScreen';
+import EditDoctorScreen from './src/screens/EditDoctorScreen';
+import UserManagementScreen from './src/screens/UserManagementScreen';
+
+
 
 const Stack = createStackNavigator();
 
@@ -88,7 +93,6 @@ const App = () => {
           <Stack.Screen name="MedicationProgram" component={MedicationProgram} />
           <Stack.Screen name="MoreOptionsModal" component={MoreOptionsModal} />
           <Stack.Screen name="AgendaScreen" component={AgendaScreen} />
-          <Stack.Screen name="Medicines" component={Medicines} />
           <Stack.Screen name="Progress" component={Progress} />
           <Stack.Screen name="HomeDatos" component={HomeDatos} />
           <Stack.Screen name="DailyReminderSettings" component={DailyReminderSettings} />
@@ -101,6 +105,13 @@ const App = () => {
           <Stack.Screen name="ReminderSettings" component={ReminderSettings} />
           <Stack.Screen name="AddDoctorScreen" component={AddDoctorScreen} />
           <Stack.Screen name="EditarFrecuenciaScreen" component={EditarFrecuenciaScreen} />
+          <Stack.Screen name="EditDosesScreen" component={EditDosesScreen} />
+          <Stack.Screen name="AgendaDetailScreen" component={AgendaDetailScreen} />
+          <Stack.Screen name="EditDoctorScreen" component={EditDoctorScreen} />
+          <Stack.Screen name="UserManagementScreen" component={UserManagementScreen} />
+
+
+
         </Stack.Navigator>
       </NavigationContainer>
     </TokenProvider>

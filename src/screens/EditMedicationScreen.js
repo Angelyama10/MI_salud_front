@@ -1,28 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useRoute } from '@react-navigation/native';
+import { TokenContext } from '../context/TokenContext';
 import { getMedicamentoDosisById, updateMedicamentoById } from '../services/medicamentos.service';
 
 const EditMedicationScreen = ({ navigation }) => {
   const { control, handleSubmit, setValue } = useForm();
   const route = useRoute();
+  const { id } = route.params || {};
+  const { token } = useContext(TokenContext);
   const [medicamento, setMedicamento] = useState(null);
   const [loading, setLoading] = useState(true);
   const [doses, setDoses] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editedDoses, setEditedDoses] = useState([]);
-
-  const { id, token } = route.params || {};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,31 +55,56 @@ const EditMedicationScreen = ({ navigation }) => {
   const handleUpdate = async (formData) => {
     try {
       setLoading(true);
-      const updatedData = { ...formData, dosis: doses };
-      await updateMedicamentoById(token, id, updatedData);
+  
+      // Construir los datos actualizados
+      const updatedData = {
+        ...formData,
+        numero_dosis: doses.length, // Número de dosis total (frecuencia)
+        dosis: doses.map((dose, index) => ({
+          ...dose,
+          numero_dosis: index + 1, // Actualiza el número de cada dosis
+        })),
+      };
+  
+      console.log('Datos enviados al servidor:', JSON.stringify(updatedData, null, 2));
+  
+      // Validar datos antes de enviar
+      if (!updatedData.nombre || !updatedData.unidad) {
+        throw new Error('El nombre y la unidad son campos obligatorios.');
+      }
+  
+      // Llamar a la API para actualizar los datos
+      const response = await updateMedicamentoById(token, id, updatedData);
+  
+      console.log('Respuesta del servidor:', JSON.stringify(response, null, 2));
+  
       Alert.alert('Éxito', 'Medicamento actualizado correctamente.');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar el medicamento.');
-      console.error('Error al actualizar medicamento:', error);
+      Alert.alert('Error', 'No se pudo actualizar el medicamento. Revisa los datos.');
+      console.error('Error al actualizar medicamento:', error.message);
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   const handleEditDoses = () => {
-    setEditedDoses([...doses]);
-    setModalVisible(true);
-  };
-
-  const handleSaveDoses = (updatedDoses) => {
-    setDoses(updatedDoses);
-    setModalVisible(false);
+    navigation.navigate('EditDosesScreen', {
+      medicationId: id,
+      initialDoses: doses,
+      initialFrequency: `${doses.length} veces al día`, // Pasa la frecuencia inicial
+      onSave: ({ doses: updatedDoses, frequency }) => {
+        setDoses(updatedDoses);
+        setValue('frecuencia', frequency); // Actualiza la frecuencia en el formulario
+      },
+      token,
+    });
   };
 
   if (loading) {
     return (
       <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007bff" />
         <Text>Cargando...</Text>
       </View>
     );
@@ -119,19 +142,7 @@ const EditMedicationScreen = ({ navigation }) => {
         )}
       />
 
-      <Text>Frecuencia</Text>
-      <Controller
-        control={control}
-        name="frecuencia"
-        render={({ field: { onChange, value } }) => (
-          <TextInput
-            style={styles.input}
-            placeholder="Frecuencia"
-            value={value}
-            onChangeText={onChange}
-          />
-        )}
-      />
+      
 
       <Text>Unidades Restantes</Text>
       <Controller
@@ -164,69 +175,11 @@ const EditMedicationScreen = ({ navigation }) => {
       />
 
       {/* Botón Recordatorios */}
-      <TouchableOpacity
-        style={styles.recordatoriosButton}
-        onPress={handleEditDoses}
-      >
+      <TouchableOpacity style={styles.recordatoriosButton} onPress={handleEditDoses}>
         <Text style={styles.recordatoriosText}>
           Recordatorios: {doses.map((d) => `${d.hora_dosis} (Tomar ${d.cantidadP})`).join(', ')}
         </Text>
       </TouchableOpacity>
-
-      {/* Modal para edición de dosis */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Programación</Text>
-
-            <FlatList
-              data={editedDoses}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
-              renderItem={({ item, index }) => (
-                <View style={styles.doseContainer}>
-                  <Text style={styles.doseTitle}>Dosis #{index + 1}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Hora de la dosis"
-                    value={item.hora_dosis}
-                    onChangeText={(text) => {
-                      const updatedDoses = [...editedDoses];
-                      updatedDoses[index].hora_dosis = text;
-                      setEditedDoses(updatedDoses);
-                    }}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Cantidad"
-                    keyboardType="numeric"
-                    value={String(item.cantidadP)}
-                    onChangeText={(text) => {
-                      const updatedDoses = [...editedDoses];
-                      updatedDoses[index].cantidadP = parseInt(text, 10) || 0;
-                      setEditedDoses(updatedDoses);
-                    }}
-                  />
-                </View>
-              )}
-            />
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={() => handleSaveDoses(editedDoses)}
-              >
-                <Text style={styles.saveButtonText}>Guardar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSubmit(handleUpdate)}>
         <Text style={styles.saveButtonText}>Guardar Cambios</Text>

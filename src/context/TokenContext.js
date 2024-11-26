@@ -7,6 +7,7 @@ export const TokenProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [userData, setUserData] = useState({ userId: null, userName: '' });
   const [medicamentos, setMedicamentos] = useState([]); // Estado global de medicamentos
+  const [doses, setDoses] = useState([]); // Estado global para las dosis
 
   useEffect(() => {
     const loadStoredData = async () => {
@@ -53,7 +54,9 @@ export const TokenProvider = ({ children }) => {
         userData,
         setToken: saveTokenAndUser,
         medicamentos,
-        setMedicamentos, // Exponer función para actualizar medicamentos globalmente
+        setMedicamentos, // Medicamentos globales
+        doses,
+        setDoses, // Estado global de dosis
       }}
     >
       {children}

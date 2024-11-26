@@ -1,41 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getAgendas } from '../services/agenda.service';
+import { TokenContext } from '../context/TokenContext'; // Importa el contexto
+import { useIsFocused } from '@react-navigation/native'; // Importa el hook
 
 const AnotacionScreen = ({ navigation }) => {
-  const [agendas, setAgendas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { token } = useContext(TokenContext); // Asegúrate de que sea el primer hook
+  const isFocused = useIsFocused(); // Hook para detectar el enfoque de la pantalla
+  const [agendas, setAgendas] = useState([]); // Mantén useState en el mismo orden
+  const [updating, setUpdating] = useState(false); // Estado para mostrar "Actualizando..."
 
-  useEffect(() => {
-    fetchAgendas();
-  }, []);
-
+  // Función para obtener las agendas
   const fetchAgendas = async () => {
-    setLoading(true);
+    setUpdating(true); // Indica que se está actualizando
     try {
-      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        console.error("No se encontró el token de autenticación");
-        throw new Error("No se encontró el token de autenticación");
+        console.error('No se encontró el token de autenticación');
+        throw new Error('No se encontró el token de autenticación');
       }
 
       const data = await getAgendas(token); // Llama al servicio con el token
-      setAgendas(data);
+      console.log('Agendas obtenidas:', data);
+
+      // Normalizar los datos recibidos
+      const normalizedAgendas = data.map((agenda) => ({
+        id: agenda.id || agenda._id, // Asegura que exista una clave `id`
+        title: agenda.nombre || 'Sin título', // Usa `nombre` o un valor por defecto
+        date: agenda.hora || null, // Usa `hora` para las fechas
+      }));
+
+      setAgendas(normalizedAgendas);
     } catch (error) {
       console.error('Error al cargar las agendas:', error.message);
     } finally {
-      setLoading(false);
+      setUpdating(false); // Finaliza la actualización
     }
   };
+
+  // Ejecutar fetchAgendas cuando la pantalla esté en foco
+  useEffect(() => {
+    if (isFocused) {
+      fetchAgendas();
+    }
+  }, [isFocused]); // Este efecto depende solo de isFocused
 
   return (
     <View style={styles.container}>
@@ -49,10 +63,13 @@ const AnotacionScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Muestra un pequeño texto de actualización si es necesario */}
+      {updating && (
+        <Text style={styles.updatingText}>Actualizando agendas...</Text>
+      )}
+
       <ScrollView contentContainerStyle={styles.content}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#5A9BD3" />
-        ) : agendas.length > 0 ? (
+        {agendas.length > 0 ? (
           agendas.map((agenda) => (
             <TouchableOpacity
               key={agenda.id}
@@ -61,7 +78,7 @@ const AnotacionScreen = ({ navigation }) => {
             >
               <Text style={styles.agendaTitle}>{agenda.title}</Text>
               <Text style={styles.agendaDate}>
-                {new Date(agenda.date).toLocaleString()}
+                {agenda.date ? new Date(agenda.date).toLocaleString() : 'Fecha no disponible'}
               </Text>
             </TouchableOpacity>
           ))
@@ -151,6 +168,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  updatingText: {
+    fontSize: 14,
+    color: '#888888',
+    textAlign: 'center',
+    marginVertical: 8,
   },
 });
 

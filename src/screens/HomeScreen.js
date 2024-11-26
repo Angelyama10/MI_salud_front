@@ -14,11 +14,13 @@ import NavigationBarComponent from '../components/NavigationBarComponents';
 import ModalMedicamento from '../components/ModalMedicamento';
 import { getMedicamentos } from '../services/medicamentos.service';
 import { TokenContext } from '../context/TokenContext';
+import { useIsFocused } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const { token, userData, medicamentos, setMedicamentos } = useContext(TokenContext); // Usa medicamentos globales
+  const isFocused = useIsFocused(); // Para detectar cuando la pantalla vuelve a ser visible
+  const { token, userData, medicamentos, setMedicamentos } = useContext(TokenContext);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [medicamentoSeleccionado, setMedicamentoSeleccionado] = useState(null);
@@ -26,7 +28,6 @@ const HomeScreen = ({ navigation }) => {
   const navItems = [
     { text: 'Inicio', iconName: 'home-heart', onPress: () => navigation.navigate('Home') },
     { text: 'Progreso', iconName: 'chart-bar', onPress: () => navigation.navigate('Progress') },
-    { text: 'Medicamentos', iconName: 'pill', onPress: () => navigation.navigate('Medicines') },
     { text: 'Más', iconName: 'dots-horizontal', onPress: () => console.log('Más presionado') },
   ];
 
@@ -57,8 +58,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const fetchMedicamentos = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const data = await getMedicamentos(token);
       const medicamentosTransformados = data.flatMap((med) =>
         med.dosis.map((dosis) => ({
@@ -69,7 +70,7 @@ const HomeScreen = ({ navigation }) => {
           icon: obtenerIcono(med.unidad),
         }))
       );
-      setMedicamentos(medicamentosTransformados); // Actualiza medicamentos globales
+      setMedicamentos(medicamentosTransformados);
     } catch (error) {
       console.error('Error al cargar medicamentos:', error);
     } finally {
@@ -78,8 +79,10 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    if (token) fetchMedicamentos(); // Carga inicial
-  }, [token]); // Actualiza al cambiar el token
+    if (token && isFocused) {
+      fetchMedicamentos(); // Recargar datos cada vez que la pantalla está activa
+    }
+  }, [token, isFocused]);
 
   const abrirModal = (medicamento) => {
     setMedicamentoSeleccionado(medicamento);
@@ -88,13 +91,25 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Encabezado */}
       <View style={styles.header}>
-        <Icon name="account-circle" size={width * 0.1} color="#FFFFFF" />
-        <Text style={styles.headerText}>{userData?.userName ? `${userData.userName} Inicio` : 'Inicio'}</Text>
+        <TouchableOpacity
+          style={styles.headerContent}
+          onPress={() => navigation.navigate('UserManagementScreen', { userId: userData?.userId })}
+        >
+          <Icon name="account-circle" size={width * 0.1} color="#FFFFFF" />
+          <Text style={styles.headerText}>
+            {userData?.userName ? `${userData.userName}` : 'Inicio'}
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Fecha */}
       <View style={styles.dateContainer}>
         <DateComponent />
       </View>
+
+      {/* Medicamentos */}
       <ScrollView contentContainerStyle={styles.content}>
         {loading ? (
           <ActivityIndicator size="large" color="#5A9BD3" />
@@ -119,7 +134,11 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.noMedicamentos}>No hay medicamentos disponibles</Text>
         )}
       </ScrollView>
+
+      {/* Barra de Navegación */}
       <NavigationBarComponent navItems={navItems} navigation={navigation} />
+
+      {/* Modal */}
       {medicamentoSeleccionado && (
         <ModalMedicamento
           visible={modalVisible}
@@ -139,14 +158,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    paddingVertical: height * 0.02,
+    paddingVertical: height * 0.03,
     backgroundColor: '#5A9BD3',
     alignItems: 'center',
   },
+  headerContent: {
+    alignItems: 'center',
+  },
   headerText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    marginTop: 5,
   },
   dateContainer: {
     backgroundColor: '#E9F7FE',

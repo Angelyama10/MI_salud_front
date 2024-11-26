@@ -9,7 +9,6 @@ const Progress = ({ navigation }) => {
   const navItems = [
     { text: 'Inicio', iconName: 'home-heart', onPress: () => navigation.navigate('Home') },
     { text: 'Progreso', iconName: 'chart-bar', onPress: () => navigation.navigate('Progress') },
-    { text: 'Medicamentos', iconName: 'pill', onPress: () => navigation.navigate('Medicines') },
     { text: 'Más', iconName: 'dots-horizontal', onPress: () => console.log('Más presionado') },
   ];
 

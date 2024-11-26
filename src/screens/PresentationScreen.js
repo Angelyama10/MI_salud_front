@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import PildorasImage from '../../assets/images/pildoras.png';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,6 +19,77 @@ const PresentationScreen = ({ navigation }) => {
 
   const route = useRoute();
   const medicamentoNombre = route.params?.medicamentoNombre || 'Medicamento';
+
+  // Limpieza de AsyncStorage al salir de la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      console.log('PresentationScreen montada');
+      return () => {
+        AsyncStorage.removeItem('selectedMedicamentos')
+          .then(() => console.log('AsyncStorage limpiado al salir de PresentationScreen'))
+          .catch((error) => console.error('Error al limpiar AsyncStorage:', error));
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    // Inicializar el medicamento solo una vez al montar el componente
+    const initializeMedicamento = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem('selectedMedicamentos');
+        const parsedData = storedData ? JSON.parse(storedData) : [];
+
+        // Crear un medicamento inicial
+        const medicamentoConPresentacion = {
+          nombre: medicamentoNombre,
+          presentacion: value, // Toma la presentación seleccionada
+          dosis: [],           // Inicializa el array vacío
+          numero_dosis: 0,     // Número de dosis inicial
+          frecuencia: '',      // Frecuencia inicial
+        };
+
+        // Evitar duplicados
+        const updatedData = parsedData.filter(
+          (med) => !(med.nombre === medicamentoNombre && med.presentacion === value)
+        );
+        updatedData.push(medicamentoConPresentacion);
+
+        await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
+        console.log('Medicamento inicializado en AsyncStorage:', medicamentoConPresentacion);
+      } catch (error) {
+        console.error('Error al inicializar el medicamento:', error);
+      }
+    };
+
+    initializeMedicamento();
+  }, [medicamentoNombre, value]); // Dependencias correctas
+
+  const handleSaveAndNavigate = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('selectedMedicamentos');
+      const parsedData = storedData ? JSON.parse(storedData) : [];
+
+      const medicamentoConPresentacion = {
+        nombre: medicamentoNombre,
+        presentacion: value,
+        dosis: [],
+        numero_dosis: 0,
+        frecuencia: '',
+      };
+
+      const updatedData = parsedData.filter(
+        (med) => !(med.nombre === medicamentoConPresentacion.nombre && med.presentacion === value)
+      );
+      updatedData.push(medicamentoConPresentacion);
+
+      await AsyncStorage.setItem('selectedMedicamentos', JSON.stringify(updatedData));
+      console.log('Medicamento actualizado con presentación:', medicamentoConPresentacion);
+
+      navigation.navigate('MedicationScreen', { medicamentoNombre });
+    } catch (error) {
+      console.error('Error guardando el medicamento:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -47,7 +119,7 @@ const PresentationScreen = ({ navigation }) => {
               dropDownContainerStyle={styles.dropdownMenu}
             />
           </View>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('MedicationScreen', { medicamentoNombre })}>
+          <TouchableOpacity style={styles.button} onPress={handleSaveAndNavigate}>
             <Text style={styles.buttonText}>Próximo</Text>
           </TouchableOpacity>
         </View>
@@ -59,75 +131,65 @@ const PresentationScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B5D6FD',
+    backgroundColor: '#FFFFFF',
   },
   upperSection: {
+    width: '100%',
+    height: '40%',
     backgroundColor: '#B5D6FD',
-    paddingBottom: height * 0.05, // Ajustado para reducir espacio
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    paddingHorizontal: '5%',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: '5%',
-    paddingTop: height * 0.02,
-    paddingBottom: height * 0.015,
+    marginBottom: 20,
   },
   title: {
-    fontSize: width * 0.06,
-    color: '#FFFFFF',
+    fontSize: 22,
     fontWeight: 'bold',
-    marginLeft: width * 0.03,
+    color: '#FFFFFF',
+    marginLeft: 15,
   },
   imageTextContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: height * 0.02,
   },
   image: {
-    width: width * 0.2, // Reducido de 0.3 a 0.2
-    height: width * 0.2, // Reducido de 0.3 a 0.2
-    resizeMode: 'contain',
-    marginBottom: height * 0.015,
+    width: 120,
+    height: 120,
+    marginBottom: 20,
   },
   questionText: {
-    fontSize: width * 0.045,
+    fontSize: 16,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginTop: height * 0.01,
-    paddingHorizontal: '10%',
   },
   lowerSection: {
-    flex: 1, // Permite que Flexbox controle el espacio
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: '5%',
-    paddingTop: height * 0.03,
-    paddingBottom: height * 0.02,
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
   },
   dropdownContainer: {
-    marginTop: height * 0.02,
-    marginBottom: height * 0.03,
+    marginBottom: 20,
   },
   dropdown: {
-    backgroundColor: '#F0F0F0',
     borderColor: '#ccc',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   dropdownMenu: {
-    backgroundColor: '#fff',
     borderColor: '#ccc',
   },
   button: {
-    backgroundColor: '#B5D6FD',
-    paddingVertical: height * 0.02,
-    borderRadius: 25,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 15,
+    borderRadius: 10,
     alignItems: 'center',
-    // marginTop: height * 0.05, // Eliminado para usar Flexbox
   },
   buttonText: {
-    color: '#fff',
-    fontSize: width * 0.05,
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
