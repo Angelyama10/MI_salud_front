@@ -103,13 +103,9 @@ const AdditionalForm = ({ navigation }) => {
 
       <View style={styles.lowerSection}>
         <View style={{ flex: 1, justifyContent: 'space-between' }}>
-          <Text style={styles.instructionText}>Ya casi terminamos. ¿Le gustaría:</Text>
+          <Text style={styles.instructionText}>Ya casi terminamos. Por favor complete estos datos :</Text>
 
-          <MedicationOption
-            iconName="calendar"
-            optionText="Establecer la duración del tratamiento"
-            onPress={() => navigation.navigate('TreatmentDuration', { medicamentoNombre })}
-          />
+         
           <MedicationOption
             iconName="alarm"
             optionText="Establecer recordatorio de recarga"

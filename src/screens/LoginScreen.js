@@ -14,7 +14,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { auth } from '../services/auth.service';
 import { TokenContext } from '../context/TokenContext';
-import ErrorModal from '../components/ErrorModal'; // Componente del modal de error
+import ErrorModal from '../components/ErrorModal'; // Modal para mostrar errores
 import { LogBox } from 'react-native';
 
 LogBox.ignoreAllLogs();
@@ -48,6 +48,7 @@ const LoginScreen = ({ navigation }) => {
   const { setToken } = useContext(TokenContext);
 
   const handleLogin = async () => {
+    // Verificar campos vacíos
     if (!email || !contraseña) {
       setErrorMessage('Por favor, ingresa el correo y la contraseña');
       setErrorVisible(true);
@@ -75,8 +76,17 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error en login:', error);
-      setErrorMessage(error.message || 'Error al iniciar sesión. Intenta de nuevo.');
-      setErrorVisible(true);
+
+      // Siempre mostrar el modal con un mensaje personalizado
+      if (error.data && error.data.message) {
+        setErrorMessage('Usuario o contraseña incorrectos.'); // Mensaje genérico
+      } else if (error.message === 'Network Error') {
+        setErrorMessage('Error de red, verifica tu conexión e intenta de nuevo.');
+      } else {
+        setErrorMessage('Usuario o contraseña incorrectos.');
+      }
+
+      setErrorVisible(true); // Asegurarse de mostrar el modal siempre
     } finally {
       setLoading(false);
     }
@@ -126,8 +136,6 @@ const LoginScreen = ({ navigation }) => {
                 <Text style={styles.loginButtonText}>Entrar</Text>
               </TouchableOpacity>
             )}
-
-            
 
             <View style={styles.registerContainer}>
               <Text style={styles.noAccountText}>¿No tienes una cuenta?</Text>
@@ -213,12 +221,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: width * 0.05,
     fontWeight: 'bold',
-  },
-  forgotPasswordText: {
-    fontSize: width * 0.04,
-    color: '#5A9BD3',
-    marginTop: height * 0.015,
-    textDecorationLine: 'underline',
   },
   registerContainer: {
     flexDirection: 'row',

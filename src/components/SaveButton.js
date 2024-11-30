@@ -19,14 +19,14 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 25,
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 20,
   },
   buttonDisabled: {
     backgroundColor: '#CCCCCC', // Color cuando está deshabilitado
   },
   buttonText: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

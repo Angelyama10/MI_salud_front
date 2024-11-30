@@ -2,17 +2,20 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 
 const ErrorModal = ({ visible, message, onClose }) => {
+  const displayMessage =
+    typeof message === 'string' ? message : JSON.stringify(message, null, 2);
+
   return (
     <Modal
-      transparent
-      animationType="slide"
+      transparent={true}
+      animationType="fade"
       visible={visible}
       onRequestClose={onClose}
     >
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Error</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
+          <Text style={styles.modalMessage}>{displayMessage}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>OK</Text>
           </TouchableOpacity>
@@ -35,12 +38,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#D9534F', // Color de error
+    color: '#D9534F',
     marginBottom: 10,
   },
   modalMessage: {

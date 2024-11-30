@@ -75,7 +75,7 @@ const App = () => {
           }}
         >
           {/* Pantallas de la aplicación */}
-          <Stack.Screen name="Splash" component={SplashScreen} />
+          <Stack.Screen name="SplashScreen" component={SplashScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Nuevo" component={NuevoUsuario} />
           <Stack.Screen name="Home" component={HomeScreen} />

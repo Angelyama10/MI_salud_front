@@ -14,7 +14,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import AnnotationTypeModal from './AnnotationTypeModal';
 import DateComponent from '../components/DateComponent';
 import { postAgenda } from '../services/agenda.service';
-import { TokenContext } from '../context/TokenContext'; // Importa el contexto
+import { TokenContext } from '../context/TokenContext';
 
 const { width } = Dimensions.get('window');
 
@@ -23,12 +23,12 @@ const AgendaScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedType, setSelectedType] = useState({
     label: 'general',
-    color: '#008080',
+    color: '#5A9BD3',
   });
   const [date, setDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
-  const { token } = useContext(TokenContext); // Extrae el token del contexto
+  const { token } = useContext(TokenContext);
 
   const selectType = (type) => {
     setSelectedType(type);
@@ -46,7 +46,7 @@ const AgendaScreen = ({ navigation }) => {
       return;
     }
 
-    const nombre = nota.split(' ').slice(0, 3).join(' ');
+    const nombre = nota.split(' ').slice(0, 6).join(' ');
 
     const agendaData = {
       nombre,
@@ -55,8 +55,6 @@ const AgendaScreen = ({ navigation }) => {
       tipo: selectedType.label,
     };
 
-    console.log('Datos enviados a la API para crear agenda:', agendaData);
-
     try {
       setIsLoading(true);
       await postAgenda(token, agendaData);
@@ -64,7 +62,7 @@ const AgendaScreen = ({ navigation }) => {
       navigation.goBack();
     } catch (error) {
       console.error('Error en handleSave:', error);
-      Alert.alert('Error', 'No se pudo crear la agenda. Por favor, verifica tu autenticación.');
+      Alert.alert('Error', 'No se pudo crear la agenda.');
     } finally {
       setIsLoading(false);
     }
@@ -73,17 +71,15 @@ const AgendaScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.navigate('AnotacionScreen')}>
-            <Icon name="arrow-left" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Agregar anotación</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isLoading}>
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Guardando...' : 'Aceptar'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size={24} color="#ffffff" />
+        </TouchableOpacity>
+        <Text style={styles.headerText}>Agregar anotación</Text>
+        <TouchableOpacity onPress={handleSave} disabled={isLoading}>
+          <Text style={styles.buttonText}>
+            {isLoading ? 'Guardando...' : 'Aceptar'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -96,35 +92,30 @@ const AgendaScreen = ({ navigation }) => {
           value={nota}
           placeholder="Escribe aquí tu descripción"
         />
+
         <View style={styles.dateContainer}>
           <DateComponent selectedDate={date} onDateChange={setDate} />
         </View>
 
-        <View style={styles.infoSection}>
-          <View style={styles.dateAndTypeSection}>
-            <TouchableOpacity
-              style={styles.annotationRow}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.annotationTypeTitle}>Tipo</Text>
-              <View style={styles.annotationTypeRow}>
-                <View
-                  style={[
-                    styles.colorDot,
-                    { backgroundColor: selectedType.color },
-                  ]}
-                />
-                <Text style={styles.annotationType}>
-                  {selectedType.label}
-                </Text>
-                <AntDesign name="right" size={24} color="black" />
-              </View>
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.annotationRow}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.annotationTypeTitle}>Tipo</Text>
+          <View style={styles.annotationTypeRow}>
+            <View
+              style={[styles.colorDot, { backgroundColor: selectedType.color }]}
+            />
+            <Text style={styles.annotationType}>{selectedType.label}</Text>
+            <AntDesign name="right" size={24} color="#333333" />
           </View>
-        </View>
+        </TouchableOpacity>
 
         <Text style={styles.warningText}>
-          Atención: La información que ingrese aquí es para su propia referencia. En caso de emergencia, por favor contacte a su servicio de emergencia local (911). También le recordamos que consulte a su médico sobre cualquier medicamento o cualquier pregunta que pueda tener sobre sus servicios de salud.
+          Atención: La información que ingrese aquí es para su propia referencia. En caso de
+          emergencia, por favor contacte a su servicio de emergencia local (911). También le
+          recordamos que consulte a su médico sobre cualquier medicamento o pregunta relacionada con
+          su salud.
         </Text>
 
         <AnnotationTypeModal
@@ -140,59 +131,66 @@ const AgendaScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FAFAFA', // Soft light background
   },
   header: {
-    backgroundColor: '#008080',
-    padding: 15,
-  },
-  headerRow: {
+    backgroundColor: '#5A9BD3', // Blue header
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerText: {
-    color: '#ffffff',
+    color: '#FFFFFF', // White text
     fontSize: 18,
     fontWeight: 'bold',
   },
   buttonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   sectionLabel: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#333333',
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 10,
+    borderRadius: 10,
+    padding: 15,
+    backgroundColor: '#E9F7FE', // Light blue background
+    fontSize: 16,
+    color: '#333333',
     marginBottom: 20,
-    backgroundColor: '#ffffff',
+    height: 150,
+    textAlignVertical: 'top',
   },
   dateContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 10,
+    elevation: 2,
     marginBottom: 20,
-  },
-  infoSection: {
-    marginBottom: 20,
-  },
-  dateAndTypeSection: {
-    marginBottom: 10,
   },
   annotationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 10,
+    elevation: 2,
+    marginBottom: 20,
   },
   annotationTypeTitle: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#333333',
   },
   annotationTypeRow: {
     flexDirection: 'row',
@@ -206,11 +204,14 @@ const styles = StyleSheet.create({
   },
   annotationType: {
     fontSize: 16,
+    color: '#333333',
   },
   warningText: {
     fontSize: 12,
-    color: '#555',
+    color: '#666666',
     marginTop: 20,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
 

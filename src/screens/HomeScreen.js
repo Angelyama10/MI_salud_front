@@ -9,17 +9,19 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import DateComponent from '../components/DateComponent';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NavigationBarComponent from '../components/NavigationBarComponents';
 import ModalMedicamento from '../components/ModalMedicamento';
 import { getMedicamentos } from '../services/medicamentos.service';
 import { TokenContext } from '../context/TokenContext';
 import { useIsFocused } from '@react-navigation/native';
+import SplashScreen from '../screens/SplashScreen';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const isFocused = useIsFocused(); // Para detectar cuando la pantalla vuelve a ser visible
+  const isFocused = useIsFocused();
   const { token, userData, medicamentos, setMedicamentos } = useContext(TokenContext);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -80,7 +82,7 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (token && isFocused) {
-      fetchMedicamentos(); // Recargar datos cada vez que la pantalla está activa
+      fetchMedicamentos();
     }
   }, [token, isFocused]);
 
@@ -131,7 +133,19 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={styles.noMedicamentos}>No hay medicamentos disponibles</Text>
+          <View style={styles.emptyContainer}>
+  <Ionicons name="calendar-sharp" size={80} color="#5A9BD3" style={styles.emptyIcon} />
+  <Text style={styles.emptyTitle}>¡Cuidamos de Ti en Misalud!</Text>
+  <Text style={styles.emptySubtitle}>
+    Tu salud es nuestra prioridad. Comienza a registrar tu información para un mejor control y seguimiento.
+  </Text>
+  <TouchableOpacity
+    style={styles.emptyButton}
+    onPress={() => navigation.navigate('Search')}
+  >
+              <Text style={styles.emptyButtonText}>Agregar Medicamento</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
@@ -211,11 +225,75 @@ const styles = StyleSheet.create({
     color: '#777777',
     marginTop: 3,
   },
-  noMedicamentos: {
-    fontSize: 16,
-    color: '#777777',
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'Yanone Kaffeesatz',
     textAlign: 'center',
-    marginTop: 20,
+    color: '#333333',
+    marginBottom: 10,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#555555',
+    marginBottom: 20,
+  },
+  emptyButton: {
+    backgroundColor: '#5A9BD3',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    borderRadius: 88,
+
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50, // Space from the top
+    paddingHorizontal: 30, // Padding for the entire container
+  },
+  emptyIcon: {
+    marginBottom: 20, // Space below the icon
+  },
+  emptyTitle: {
+    fontSize: 20, // Larger text
+    fontWeight: 'bold', // Emphasize the title
+    textAlign: 'center',
+    color: '#333333',
+    marginBottom: 10, // Space below the title
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#555555',
+    marginBottom: 20, // Space below the subtitle
+    lineHeight: 22, // Improve readability
+  },
+  emptyButton: {
+    backgroundColor: '#5A9BD3',
+    paddingVertical: 14, // Increased button padding
+    paddingHorizontal: 30, // Wider button
+    borderRadius: 20, // Rounded corners
+    elevation: 3, // Shadow for a modern feel
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16, // Slightly larger text
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
